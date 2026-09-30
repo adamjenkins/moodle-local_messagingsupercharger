@@ -1,0 +1,73 @@
+<?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+namespace local_messagingsupercharger\external;
+
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_messagingsupercharger\local\scheduler;
+
+/**
+ * Change the text or time of a scheduled message.
+ *
+ * @package    local_messagingsupercharger
+ * @copyright  2026 Adam Jenkins <adam@wisecat.net>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class update_scheduled_message extends external_api {
+    /**
+     * Parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'id' => new external_value(PARAM_INT, 'Scheduled message id'),
+            'text' => new external_value(PARAM_RAW, 'Text'),
+            'timesend' => new external_value(PARAM_INT, 'When to send'),
+        ]);
+    }
+
+    /**
+     * Update.
+     *
+     * @param int $id
+     * @param string $text
+     * @param int $timesend
+     * @return array
+     */
+    public static function execute(int $id, string $text, int $timesend): array {
+        global $USER;
+        $params = self::validate_parameters(self::execute_parameters(), ['id' => $id, 'text' => $text, 'timesend' => $timesend]);
+        self::validate_context(\context_system::instance());
+        scheduler::update($params['id'], (int)$USER->id, $params['text'], $params['timesend']);
+        return ['success' => true];
+    }
+
+    /**
+     * Returns.
+     *
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'success' => new external_value(PARAM_BOOL, 'Updated'),
+        ]);
+    }
+}
