@@ -32,7 +32,7 @@ const STRING_KEYS = [
     'showhistory', 'edited', 'seenby', 'pinned', 'editscheduled', 'cancelscheduled',
     'failed', 'searchmessages', 'searchplaceholder', 'noresults', 'loadmore', 'mentionlist', 'nomentions',
     'confirmdeleteforall', 'confirmcancelscheduled', 'showseenby', 'showseenby_desc', 'history',
-    'jumptomessage', 'reactedwith', 'sendat', 'linkpreview', 'attachmentonly', 'schedulesaved',
+    'jumptomessage', 'reactedwith', 'linkpreview', 'attachmentonly', 'schedulesaved',
     'toomanyattachmentsjs', 'attachmenttoolargejs', 'attachmenttypejs', 'pinnedcount', 'scheduledcount',
     'send', 'seenbyheading', 'resizedrawer', 'imagefit', 'imageoriginal', 'imageviewer',
 ];
