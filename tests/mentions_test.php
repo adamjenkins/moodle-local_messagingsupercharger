@@ -51,16 +51,27 @@ final class mentions_test extends \advanced_testcase {
         global $DB;
         $sink = $this->redirectMessages();
         $mia = $this->users['Mia'];
-        $message = sender::send($this->users['Ann']->id, $this->conversation->id, 'Hi @Mia Mentioned, see this',
-            FORMAT_PLAIN, 0, 0, [$mia->id]);
+        $message = sender::send(
+            $this->users['Ann']->id,
+            $this->conversation->id,
+            'Hi @Mia Mentioned, see this',
+            FORMAT_PLAIN,
+            0,
+            0,
+            [$mia->id]
+        );
 
-        $this->assertTrue($DB->record_exists('local_messagingsupercharger_mention',
-            ['messageid' => $message->id, 'userid' => $mia->id]));
+        $this->assertTrue($DB->record_exists(
+            'local_messagingsupercharger_mention',
+            ['messageid' => $message->id, 'userid' => $mia->id]
+        ));
         $this->assertStringContainsString('class="msgsc-mention"', $message->smallmessage);
         $this->assertStringContainsString('/user/profile.php?id=' . $mia->id, $message->smallmessage);
 
-        $notifications = array_values(array_filter($sink->get_messages(),
-            fn($m) => ($m->component ?? '') === 'local_messagingsupercharger'));
+        $notifications = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => ($m->component ?? '') === 'local_messagingsupercharger'
+        ));
         $this->assertCount(1, $notifications);
         $this->assertEquals('mention', $notifications[0]->eventtype);
         $this->assertEquals($mia->id, $notifications[0]->useridto);
@@ -71,8 +82,15 @@ final class mentions_test extends \advanced_testcase {
         global $DB;
         $this->redirectMessages();
         $outsider = $this->getDataGenerator()->create_user();
-        $message = sender::send($this->users['Ann']->id, $this->conversation->id, 'Hello all', FORMAT_PLAIN, 0, 0,
-            [$outsider->id, $this->users['Ann']->id]);
+        $message = sender::send(
+            $this->users['Ann']->id,
+            $this->conversation->id,
+            'Hello all',
+            FORMAT_PLAIN,
+            0,
+            0,
+            [$outsider->id, $this->users['Ann']->id]
+        );
         $this->assertSame(0, $DB->count_records('local_messagingsupercharger_mention', ['messageid' => $message->id]));
     }
 
@@ -80,8 +98,15 @@ final class mentions_test extends \advanced_testcase {
         global $DB;
         $sink = $this->redirectMessages();
         api::block_user($this->users['Mia']->id, $this->users['Ann']->id);
-        sender::send($this->users['Ann']->id, $this->conversation->id, 'Hey @Mia Mentioned', FORMAT_PLAIN, 0, 0,
-            [$this->users['Mia']->id]);
+        sender::send(
+            $this->users['Ann']->id,
+            $this->conversation->id,
+            'Hey @Mia Mentioned',
+            FORMAT_PLAIN,
+            0,
+            0,
+            [$this->users['Mia']->id]
+        );
         $this->assertSame(1, $DB->count_records('local_messagingsupercharger_mention'));
         $notifications = array_filter($sink->get_messages(), fn($m) => ($m->component ?? '') === 'local_messagingsupercharger');
         $this->assertCount(0, $notifications);
@@ -96,8 +121,10 @@ final class mentions_test extends \advanced_testcase {
 
     public function test_candidates_are_members_only(): void {
         $outsider = $this->getDataGenerator()->create_user(['firstname' => 'Mike', 'lastname' => 'Outsider']);
-        $names = array_column(mentions::candidates((int)$this->conversation->id, (int)$this->users['Ann']->id, 'm'),
-            'fullname');
+        $names = array_column(
+            mentions::candidates((int)$this->conversation->id, (int)$this->users['Ann']->id, 'm'),
+            'fullname'
+        );
         $this->assertSame(['Mia Mentioned'], $names);
         $this->assertNotContains('Mike Outsider', $names);
 
@@ -123,7 +150,14 @@ final class mentions_test extends \advanced_testcase {
         role_assign($roleid, $this->users['Ann']->id, $context->id);
         accesslib_clear_all_caches_for_unit_testing();
         $this->expectException(\required_capability_exception::class);
-        sender::send($this->users['Ann']->id, $this->conversation->id, 'Hi @Mia Mentioned', FORMAT_PLAIN, 0, 0,
-            [$this->users['Mia']->id]);
+        sender::send(
+            $this->users['Ann']->id,
+            $this->conversation->id,
+            'Hi @Mia Mentioned',
+            FORMAT_PLAIN,
+            0,
+            0,
+            [$this->users['Mia']->id]
+        );
     }
 }

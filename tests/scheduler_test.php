@@ -75,8 +75,11 @@ final class scheduler_test extends \advanced_testcase {
         $this->assertCount(1, $tasks);
 
         // The task does nothing before it is due.
-        $this->assertNull(scheduler::deliver($id, (int)$DB->get_field('local_messagingsupercharger_sched', 'timesend',
-            ['id' => $id])));
+        $this->assertNull(scheduler::deliver($id, (int)$DB->get_field(
+            'local_messagingsupercharger_sched',
+            'timesend',
+            ['id' => $id]
+        )));
 
         $messageid = $this->deliver_now($id);
         $this->assertNotNull($messageid);
@@ -89,8 +92,13 @@ final class scheduler_test extends \advanced_testcase {
     public function test_blocked_recipient_at_delivery_time_fails(): void {
         global $DB;
         $this->redirectMessages();
-        $id = scheduler::schedule((int)$this->alice->id, (int)$this->conversation->id, 'Blocked later', FORMAT_PLAIN,
-            time() + HOURSECS);
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'Blocked later',
+            FORMAT_PLAIN,
+            time() + HOURSECS
+        );
         // Bob blocks Alice after she scheduled it.
         api::block_user($this->bob->id, $this->alice->id);
         $this->assertNull($this->deliver_now($id));
@@ -154,8 +162,14 @@ final class scheduler_test extends \advanced_testcase {
         $generator = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger');
         $draftitemid = file_get_unused_draft_itemid();
         $generator->create_draft_file($this->alice, $draftitemid, 'plan.txt');
-        $id = scheduler::schedule((int)$this->alice->id, (int)$this->conversation->id, 'With file', FORMAT_PLAIN,
-            time() + HOURSECS, $draftitemid);
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'With file',
+            FORMAT_PLAIN,
+            time() + HOURSECS,
+            $draftitemid
+        );
         $setid = (int)$DB->get_field('local_messagingsupercharger_sched', 'attachsetid', ['id' => $id]);
         $this->assertCount(1, local\attachments::set_files($setid));
         scheduler::cancel($id, (int)$this->alice->id);
@@ -170,8 +184,14 @@ final class scheduler_test extends \advanced_testcase {
         $generator = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger');
         $draftitemid = file_get_unused_draft_itemid();
         $generator->create_draft_file($this->alice, $draftitemid, 'plan.txt');
-        $id = scheduler::schedule((int)$this->alice->id, (int)$this->conversation->id, 'With file', FORMAT_PLAIN,
-            time() + HOURSECS, $draftitemid);
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'With file',
+            FORMAT_PLAIN,
+            time() + HOURSECS,
+            $draftitemid
+        );
         $messageid = $this->deliver_now($id);
         $message = $DB->get_record('messages', ['id' => $messageid]);
         $this->assertStringContainsString('plan.txt', $message->smallmessage);

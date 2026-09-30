@@ -57,8 +57,16 @@ class local_messagingsupercharger_generator extends component_generator_base {
         // Link the conversation as groups_create_group() does for an admin (it skips this for
         // other users), before adding members so core adds them to it.
         $context = context_course::instance($course->id);
-        $created = api::create_conversation(api::MESSAGE_CONVERSATION_TYPE_GROUP, [], $group->name,
-            api::MESSAGE_CONVERSATION_ENABLED, 'core_group', 'groups', $group->id, $context->id);
+        $created = api::create_conversation(
+            api::MESSAGE_CONVERSATION_TYPE_GROUP,
+            [],
+            $group->name,
+            api::MESSAGE_CONVERSATION_ENABLED,
+            'core_group',
+            'groups',
+            $group->id,
+            $context->id
+        );
         foreach ($members as $member) {
             $generator->create_group_member(['groupid' => $group->id, 'userid' => $member->id]);
         }
@@ -77,8 +85,12 @@ class local_messagingsupercharger_generator extends component_generator_base {
      * @param string $content
      * @return stored_file
      */
-    public function create_draft_file(stdClass $user, int $draftitemid, string $filename = 'notes.txt',
-            string $content = 'hello'): stored_file {
+    public function create_draft_file(
+        stdClass $user,
+        int $draftitemid,
+        string $filename = 'notes.txt',
+        string $content = 'hello'
+    ): stored_file {
         $fs = get_file_storage();
         return $fs->create_file_from_string([
             'contextid' => context_user::instance($user->id)->id,

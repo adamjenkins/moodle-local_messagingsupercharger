@@ -82,8 +82,10 @@ final class linkpreviews_test extends \advanced_testcase {
     public function test_private_hosts_are_never_fetched(): void {
         $this->resetAfterTest();
         // Literal private addresses fail before any connection is attempted.
-        foreach (['http://127.0.0.1/', 'http://192.168.56.13/', 'http://169.254.169.254/latest/meta-data/',
-                'http://[::1]/', 'http://10.0.0.1/'] as $url) {
+        foreach (
+            ['http://127.0.0.1/', 'http://192.168.56.13/', 'http://169.254.169.254/latest/meta-data/',
+                'http://[::1]/', 'http://10.0.0.1/'] as $url
+        ) {
             $this->assertNull(linkpreviews::fetch($url, 1024, ['text/html']), $url);
         }
         $this->assertNull(linkpreviews::resolve_public('127.0.0.1'));

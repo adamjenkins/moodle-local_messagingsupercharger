@@ -245,9 +245,15 @@ class attachments {
             $name = $file->get_filename();
             $url = self::file_url($file);
             if (file_mimetype_in_typegroup($file->get_mimetype(), 'web_image')) {
-                $thumb = new \moodle_url($url, ['preview' => 'bigthumb']);
-                $content = \html_writer::empty_tag('img', ['src' => $thumb->out(false), 'alt' => $name,
-                    'class' => 'msgsc-attachment-thumb']);
+                // The image itself, not a thumbnail: the page scales it to the width available
+                // (never beyond its real size), and clicking it opens a full-size viewer.
+                $attributes = ['src' => $url->out(false), 'alt' => $name, 'class' => 'msgsc-attachment-thumb'];
+                $info = $file->get_imageinfo();
+                if ($info && !empty($info['width']) && !empty($info['height'])) {
+                    $attributes['width'] = (int)$info['width'];
+                    $attributes['height'] = (int)$info['height'];
+                }
+                $content = \html_writer::empty_tag('img', $attributes);
                 $items[] = \html_writer::link($url, $content, ['class' => 'msgsc-attachment msgsc-attachment-image',
                     'title' => $name]);
             } else {

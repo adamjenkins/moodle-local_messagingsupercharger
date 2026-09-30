@@ -32,6 +32,13 @@ $functions = [
         'ajax' => true,
         'loginrequired' => true,
     ],
+    'local_messagingsupercharger_get_individual_conversation' => [
+        'classname' => \local_messagingsupercharger\external\get_individual_conversation::class,
+        'description' => 'The id of the current user\'s conversation with another user, if any.',
+        'type' => 'read',
+        'ajax' => true,
+        'loginrequired' => true,
+    ],
     'local_messagingsupercharger_get_conversation_extras' => [
         'classname' => \local_messagingsupercharger\external\get_conversation_extras::class,
         'description' => 'Reactions, edits, pins, previews and seen-by for an open conversation.',

@@ -44,11 +44,13 @@ class features {
     const SCHEDULING = 'scheduling';
     /** @var string Message search. */
     const SEARCH = 'search';
+    /** @var string Drag handle to change the drawer's width. */
+    const RESIZABLEDRAWER = 'resizabledrawer';
 
     /** @var string[] Every feature, in settings order. */
     const ALL = [
         self::ATTACHMENTS, self::RICHTEXT, self::MENTIONS, self::REACTIONS, self::EDITING,
-        self::PINNING, self::LINKPREVIEWS, self::SEENBY, self::SCHEDULING, self::SEARCH,
+        self::PINNING, self::LINKPREVIEWS, self::SEENBY, self::SCHEDULING, self::SEARCH, self::RESIZABLEDRAWER,
     ];
 
     /** @var string Component name. */

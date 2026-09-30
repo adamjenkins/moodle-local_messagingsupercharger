@@ -59,8 +59,13 @@ final class sender_test extends \advanced_testcase {
         $this->generator->create_draft_file($this->alice, $draftitemid, 'photo.png', $this->generator->png());
         $this->generator->create_draft_file($this->alice, $draftitemid, 'notes.txt', 'some notes');
 
-        $message = sender::send($this->alice->id, $this->conversation->id, "Look <b>at</b> this\nplease", FORMAT_PLAIN,
-            $draftitemid);
+        $message = sender::send(
+            $this->alice->id,
+            $this->conversation->id,
+            "Look <b>at</b> this\nplease",
+            FORMAT_PLAIN,
+            $draftitemid
+        );
 
         // Stored as HTML in core's table, the author's text escaped, the list appended.
         $this->assertEquals(FORMAT_HTML, $message->fullmessageformat);
@@ -139,8 +144,13 @@ final class sender_test extends \advanced_testcase {
 
     public function test_capability_needed_for_attachments(): void {
         $roleid = $this->getDataGenerator()->create_role();
-        assign_capability('local/messagingsupercharger:sendattachments', CAP_PROHIBIT, $roleid,
-            \context_system::instance()->id, true);
+        assign_capability(
+            'local/messagingsupercharger:sendattachments',
+            CAP_PROHIBIT,
+            $roleid,
+            \context_system::instance()->id,
+            true
+        );
         role_assign($roleid, $this->alice->id, \context_system::instance()->id);
         accesslib_clear_all_caches_for_unit_testing();
         $draftitemid = file_get_unused_draft_itemid();
@@ -181,8 +191,12 @@ final class sender_test extends \advanced_testcase {
 
     public function test_rich_text_is_cleaned_by_core_on_display(): void {
         $this->redirectMessages();
-        $message = sender::send($this->alice->id, $this->conversation->id,
-            '<p>Hi <strong>Bob</strong><script>alert(1)</script></p>', FORMAT_HTML);
+        $message = sender::send(
+            $this->alice->id,
+            $this->conversation->id,
+            '<p>Hi <strong>Bob</strong><script>alert(1)</script></p>',
+            FORMAT_HTML
+        );
         $formatted = sender::format_for_display($message);
         $this->assertStringContainsString('<strong>Bob</strong>', $formatted);
         $this->assertStringNotContainsString('<script', $formatted);
@@ -190,8 +204,10 @@ final class sender_test extends \advanced_testcase {
 
     public function test_plain_to_html_links_urls_and_escapes(): void {
         $html = sender::plain_to_html("See https://example.com/a?b=1&c=2.\n<i>x</i>");
-        $this->assertStringContainsString('<a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a>.',
-            $html);
+        $this->assertStringContainsString(
+            '<a href="https://example.com/a?b=1&amp;c=2">https://example.com/a?b=1&amp;c=2</a>.',
+            $html
+        );
         $this->assertStringContainsString('&lt;i&gt;x&lt;/i&gt;', $html);
     }
 

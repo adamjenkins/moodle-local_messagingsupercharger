@@ -66,8 +66,15 @@ final class provider_test extends provider_testcase {
         $message = sender::send((int)$this->ann->id, (int)$individual->id, 'Hello Ben', FORMAT_PLAIN, $draftitemid);
         editing::edit((int)$message->id, (int)$this->ann->id, 'Hello Ben!');
         pins::set((int)$message->id, (int)$this->ann->id, true);
-        $groupmessage = sender::send((int)$this->ann->id, (int)$group->id, 'Hi @Ben X', FORMAT_PLAIN, 0, 0,
-            [$this->ben->id]);
+        $groupmessage = sender::send(
+            (int)$this->ann->id,
+            (int)$group->id,
+            'Hi @Ben X',
+            FORMAT_PLAIN,
+            0,
+            0,
+            [$this->ben->id]
+        );
         reactions::toggle((int)$groupmessage->id, (int)$this->ann->id, 'thumbsup');
         scheduler::schedule((int)$this->ann->id, (int)$group->id, 'Tomorrow', FORMAT_PLAIN, time() + DAYSECS);
         set_user_preference('local_messagingsupercharger_showseenby', 0, $this->ann);

@@ -82,10 +82,16 @@ final class editing_test extends \advanced_testcase {
     }
 
     public function test_edit_core_sent_message(): void {
-        $message = api::send_message_to_conversation((int)$this->alice->id, (int)$this->conversation->id, 'From core',
-            FORMAT_MOODLE);
-        $this->assertSame(['text' => 'From core', 'format' => (int)FORMAT_PLAIN],
-            editing::get_editable((int)$message->id, (int)$this->alice->id));
+        $message = api::send_message_to_conversation(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'From core',
+            FORMAT_MOODLE
+        );
+        $this->assertSame(
+            ['text' => 'From core', 'format' => (int)FORMAT_PLAIN],
+            editing::get_editable((int)$message->id, (int)$this->alice->id)
+        );
         $edited = editing::edit((int)$message->id, (int)$this->alice->id, 'From core, edited');
         $this->assertStringContainsString('From core, edited', $edited->smallmessage);
         $this->assertSame(['From core'], array_column(editing::revisions((int)$message->id, (int)$this->alice->id), 'text'));
@@ -119,8 +125,13 @@ final class editing_test extends \advanced_testcase {
 
     public function test_edit_needs_capability(): void {
         $roleid = $this->getDataGenerator()->create_role();
-        assign_capability('local/messagingsupercharger:editownmessage', CAP_PROHIBIT, $roleid,
-            \context_system::instance()->id, true);
+        assign_capability(
+            'local/messagingsupercharger:editownmessage',
+            CAP_PROHIBIT,
+            $roleid,
+            \context_system::instance()->id,
+            true
+        );
         role_assign($roleid, $this->alice->id, \context_system::instance()->id);
         accesslib_clear_all_caches_for_unit_testing();
         $message = sender::send((int)$this->alice->id, (int)$this->conversation->id, 'Locked', FORMAT_PLAIN);
@@ -143,8 +154,10 @@ final class editing_test extends \advanced_testcase {
 
         // Core's own delete-for-all: a DELETED action for every member.
         foreach ([$this->alice, $this->bob] as $user) {
-            $this->assertTrue($DB->record_exists('message_user_actions',
-                ['messageid' => $message->id, 'userid' => $user->id, 'action' => api::MESSAGE_ACTION_DELETED]));
+            $this->assertTrue($DB->record_exists(
+                'message_user_actions',
+                ['messageid' => $message->id, 'userid' => $user->id, 'action' => api::MESSAGE_ACTION_DELETED]
+            ));
         }
         // The observer removed the plugin's data and files.
         foreach (cleanup::MESSAGE_TABLES as $table) {
