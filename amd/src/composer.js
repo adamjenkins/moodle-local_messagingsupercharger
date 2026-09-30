@@ -226,7 +226,9 @@ export default class Composer {
                 return;
             }
             const {footer} = this.parts();
-            const entertosend = footer && footer.getAttribute('data-enter-to-send') === 'true';
+            // Same test as core (message_drawer_view_conversation.js): the preference is stored as '1'.
+            const setting = footer ? footer.getAttribute('data-enter-to-send') : null;
+            const entertosend = !!setting && setting !== 'false' && setting !== '0';
             if (e.key === 'Enter' && !e.shiftKey && entertosend) {
                 this.beforeSend(e);
             }

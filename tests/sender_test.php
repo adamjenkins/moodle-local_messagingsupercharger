@@ -92,6 +92,19 @@ final class sender_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<b>at</b>', $formatted);
     }
 
+    public function test_attachments_are_taken_from_the_senders_draft_area(): void {
+        // A send made by code running as someone else (a script, a generator) still
+        // attaches the sender's files, not the logged-in user's.
+        $this->redirectMessages();
+        $draftitemid = file_get_unused_draft_itemid();
+        $this->generator->create_draft_file($this->alice, $draftitemid, 'from-alice.txt');
+        $this->setAdminUser();
+        $message = sender::send($this->alice->id, $this->conversation->id, 'Scripted', FORMAT_PLAIN, $draftitemid);
+        $setid = (int)$GLOBALS['DB']->get_field('local_messagingsupercharger_attach', 'id', ['messageid' => $message->id]);
+        $this->assertSame(['from-alice.txt'], array_map(fn($f) => $f->get_filename(), attachments::set_files($setid)));
+        $this->assertStringContainsString('from-alice.txt', $message->smallmessage);
+    }
+
     public function test_attachment_only_message(): void {
         $this->redirectMessages();
         $draftitemid = file_get_unused_draft_itemid();

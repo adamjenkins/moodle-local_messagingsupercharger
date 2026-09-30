@@ -104,6 +104,32 @@ class local_messagingsupercharger_generator extends component_generator_base {
     }
 
     /**
+     * A message with an attached file, sent between two users (Behat entity "attachment messages").
+     *
+     * @param array $record userid, contactid, message, filename, optional content
+     * @return stdClass The core messages record
+     */
+    public function create_attachment_message(array $record): stdClass {
+        global $CFG;
+        require_once($CFG->dirroot . '/message/lib.php');
+        $from = core_user::get_user($record['userid'], '*', MUST_EXIST);
+        $to = core_user::get_user($record['contactid'], '*', MUST_EXIST);
+        $conversationid = api::get_conversation_between_users([$from->id, $to->id]);
+        if (!$conversationid) {
+            $conversationid = $this->create_individual_conversation($from, $to)->id;
+        }
+        $draftitemid = file_get_unused_draft_itemid();
+        $this->create_draft_file($from, $draftitemid, $record['filename'], $record['content'] ?? 'Attached content');
+        return \local_messagingsupercharger\local\sender::send(
+            (int)$from->id,
+            (int)$conversationid,
+            (string)$record['message'],
+            FORMAT_PLAIN,
+            $draftitemid
+        );
+    }
+
+    /**
      * A tiny valid PNG.
      *
      * @return string

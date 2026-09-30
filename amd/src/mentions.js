@@ -32,7 +32,9 @@ import * as Repository from 'local_messagingsupercharger/repository';
 import {enabled, str} from 'local_messagingsupercharger/state';
 import {el, uniqueId} from 'local_messagingsupercharger/dom';
 
-const TOKEN = /(^|\s)@([^\s@]{0,40})$/u;
+// "@" at the start or after a space, then up to 40 characters that may include spaces
+// (people's names have them), on the same line.
+const TOKEN = /(^|\s)@([^\s@][^@\n]{0,39}|)$/u;
 
 export default class Mentions {
     /**
@@ -111,8 +113,13 @@ export default class Mentions {
             this.close();
             return;
         }
-        clearTimeout(this.timer);
         const query = match[2];
+        // Just picked (or typed) someone's full name: nothing more to suggest.
+        if (/\s$/.test(query) && Object.values(this.picked).includes(query.trim())) {
+            this.close();
+            return;
+        }
+        clearTimeout(this.timer);
         this.timer = setTimeout(() => this.fetch(query), 200);
     }
 
@@ -138,6 +145,11 @@ export default class Mentions {
         const pending = new Pending('local_messagingsupercharger/mentions:fetch');
         Repository.getMentionCandidates(conversationid, query).then((candidates) => {
             if (request === this.request && conversationid === this.controller.conversationId) {
+                if (!candidates.length && /\s/.test(query)) {
+                    // Past the end of a name and into ordinary text: stay out of the way.
+                    this.close();
+                    return candidates;
+                }
                 this.candidates = candidates;
                 this.active = candidates.length ? 0 : -1;
                 this.render();

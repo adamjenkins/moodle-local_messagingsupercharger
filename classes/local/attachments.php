@@ -132,17 +132,27 @@ class attachments {
         $syscontext = \context_system::instance();
         $options = ['subdirs' => 0, 'maxbytes' => features::max_attachment_size(), 'maxfiles' => -1];
         if ($attached) {
-            file_save_draft_area_files(
-                $draftitemid,
-                $syscontext->id,
-                features::COMPONENT,
-                self::AREA_ATTACHMENT,
-                $setid,
-                $options
-            );
+            // Copied by hand: file_save_draft_area_files() reads the draft area of whoever
+            // is logged in, and the sender is not always that person (scheduled or scripted sends).
+            $fs = get_file_storage();
+            foreach ($attached as $file) {
+                $fs->create_file_from_storedfile([
+                    'contextid' => $syscontext->id,
+                    'component' => features::COMPONENT,
+                    'filearea' => self::AREA_ATTACHMENT,
+                    'itemid' => $setid,
+                    'filepath' => '/',
+                    'userid' => $userid,
+                ], $file);
+            }
             self::clear_draft($userid, $draftitemid);
         }
         if ($inline) {
+            global $USER;
+            if ((int)$USER->id !== $userid) {
+                // Rewriting draft URLs in the text relies on the logged-in user's draft area.
+                throw new \coding_exception('Embedded images can only be saved by their sender');
+            }
             $html = file_save_draft_area_files(
                 $editordraftitemid,
                 $syscontext->id,
