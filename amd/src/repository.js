@@ -59,9 +59,10 @@ export const deleteDraftFile = (draftitemid, filename) => call('delete_draft_fil
  * @param {Number} conversationid
  * @param {Number} draftitemid
  * @param {Function} onProgress Called with a fraction from 0 to 1
- * @returns {Promise<Object>} The server's JSON response
+ * @param {Function} [onStart] Called with the XMLHttpRequest, so the caller can abort it
+ * @returns {Promise<Object>} The server's JSON response (with the draft item id, created if 0 was given)
  */
-export const uploadFile = (file, conversationid, draftitemid, onProgress) => new Promise((resolve, reject) => {
+export const uploadFile = (file, conversationid, draftitemid, onProgress, onStart) => new Promise((resolve, reject) => {
     const data = new FormData();
     data.append('file', file, file.name || 'image.png');
     data.append('conversationid', conversationid);
@@ -89,5 +90,9 @@ export const uploadFile = (file, conversationid, draftitemid, onProgress) => new
         }
     });
     xhr.addEventListener('error', () => reject(new Error(xhr.statusText || 'Upload failed')));
+    xhr.addEventListener('abort', () => reject(new Error('aborted')));
+    if (onStart) {
+        onStart(xhr);
+    }
     xhr.send(data);
 });

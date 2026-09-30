@@ -41,6 +41,7 @@
       <INDEXES>
         <INDEX NAME="messageid" UNIQUE="false" FIELDS="messageid"/>
         <INDEX NAME="conversationid" UNIQUE="false" FIELDS="conversationid"/>
+        <INDEX NAME="scheduledid" UNIQUE="false" FIELDS="scheduledid"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="local_messagingsupercharger_mention" COMMENT="Users mentioned in a message.">
@@ -155,6 +156,7 @@
       <INDEXES>
         <INDEX NAME="messageid-useridto" UNIQUE="true" FIELDS="messageid, useridto"/>
         <INDEX NAME="timedue" UNIQUE="false" FIELDS="timedue"/>
+        <INDEX NAME="useridfrom" UNIQUE="false" FIELDS="useridfrom"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="local_messagingsupercharger_preview" COMMENT="Cached link previews, keyed by URL hash.">

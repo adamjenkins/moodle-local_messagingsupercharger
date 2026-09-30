@@ -31,6 +31,9 @@ export default {
     // messages page (message_index.mustache). Both can be on /message/index.php at once.
     ROOTS: '[data-region="message-drawer"], [data-region="message-index"]',
 
+    // The drawer's outer container (core/drawer.mustache); closing the drawer hides this.
+    DRAWER_CONTAINER: '[data-region="right-hand-drawer"]',
+
     // Containers inside a root.
     HEADER_CONTAINER: '[data-region="header-container"]',
     BODY_CONTAINER: '[data-region="body-container"]',

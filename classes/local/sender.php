@@ -88,18 +88,73 @@ class sender {
     }
 
     /**
+     * Normalise a format: FORMAT_HTML (rich text), FORMAT_MOODLE (an ordinary drawer message
+     * passed through as core sends it) or FORMAT_PLAIN (drawer text with plugin extras).
+     *
+     * @param int|string $format
+     * @return int
+     */
+    public static function normalise_format($format): int {
+        if (self::is_html($format)) {
+            return (int)FORMAT_HTML;
+        }
+        return (int)$format === (int)FORMAT_MOODLE ? (int)FORMAT_MOODLE : (int)FORMAT_PLAIN;
+    }
+
+    /**
+     * Check a message can be sent, including its attachments, without sending anything.
+     * Used to check every message of a batch before any is sent.
+     *
+     * @param int $userid
+     * @param int $conversationid
+     * @param string $text
+     * @param int $format
+     * @param int $draftitemid
+     * @param int $editordraftitemid
+     * @param int[] $mentionids
+     * @param string[]|null $filenames
+     * @throws \moodle_exception
+     */
+    public static function precheck(
+        int $userid,
+        int $conversationid,
+        string $text,
+        int $format,
+        int $draftitemid = 0,
+        int $editordraftitemid = 0,
+        array $mentionids = [],
+        ?array $filenames = null
+    ): void {
+        $conversation = conversations::get($conversationid);
+        $mentions = mentions::resolve($conversation, $userid, $mentionids);
+        $attached = attachments::draft_files($userid, $draftitemid, $filenames);
+        $inline = attachments::draft_files($userid, $editordraftitemid);
+        self::check(
+            $userid,
+            $conversation,
+            $text,
+            self::normalise_format($format),
+            $attached || $inline,
+            array_keys($mentions)
+        );
+        attachments::validate_files($attached);
+    }
+
+    /**
      * Send a message.
      *
      * @param int $userid Sender
      * @param int $conversationid
      * @param string $text The author's text
-     * @param int $format FORMAT_PLAIN (text typed in the drawer) or FORMAT_HTML (rich text)
+     * @param int $format FORMAT_PLAIN (text typed in the drawer), FORMAT_HTML (rich text) or
+     *        FORMAT_MOODLE (an ordinary message, sent exactly as core would)
      * @param int $draftitemid Draft area of attachments (0 for none)
      * @param int $editordraftitemid Draft area of images embedded in rich text (0 for none)
      * @param int[] $mentionids Users the author picked from the mention list
      * @param int|null $setid An attachment set prepared earlier (scheduled messages)
+     * @param string[]|null $filenames Attach only these files from the draft area (null for all)
      * @return \stdClass The core messages record
-     * @throws \moodle_exception
+     * @throws \moodle_exception If the message cannot be sent; nothing has been sent then
      */
     public static function send(
         int $userid,
@@ -109,43 +164,69 @@ class sender {
         int $draftitemid = 0,
         int $editordraftitemid = 0,
         array $mentionids = [],
-        ?int $setid = null
+        ?int $setid = null,
+        ?array $filenames = null
     ): \stdClass {
         global $DB;
 
-        $format = self::is_html($format) ? (int)FORMAT_HTML : (int)FORMAT_PLAIN;
+        $format = self::normalise_format($format);
         $conversation = conversations::get($conversationid);
         $mentions = mentions::resolve($conversation, $userid, $mentionids);
-        $hasattachments = $setid !== null || attachments::draft_files($userid, $draftitemid)
+        $hasattachments = $setid !== null || attachments::draft_files($userid, $draftitemid, $filenames)
             || attachments::draft_files($userid, $editordraftitemid);
         self::check($userid, $conversation, $text, $format, $hasattachments, array_keys($mentions));
 
+        if ($format === (int)FORMAT_MOODLE && !$hasattachments && !$mentions) {
+            // Nothing for the plugin to add: send it exactly as core's drawer would.
+            $sent = api::send_message_to_conversation($userid, $conversationid, $text, FORMAT_MOODLE);
+            return $DB->get_record('messages', ['id' => $sent->id], '*', MUST_EXIST);
+        }
+        if ($format === (int)FORMAT_MOODLE) {
+            $format = (int)FORMAT_PLAIN;
+        }
+
         if ($setid === null) {
-            [$setid, $text] = attachments::create_set($userid, $conversationid, $draftitemid, $editordraftitemid, $text);
+            [$setid, $text] = attachments::create_set(
+                $userid,
+                $conversationid,
+                $draftitemid,
+                $editordraftitemid,
+                $text,
+                $filenames
+            );
         }
 
         $html = self::build_html($text, $format, $mentions, $setid);
         $sent = api::send_message_to_conversation($userid, $conversationid, $html, FORMAT_HTML);
         $messageid = (int)$sent->id;
 
-        $DB->insert_record('local_messagingsupercharger_meta', (object)[
-            'messageid' => $messageid,
-            'conversationid' => $conversationid,
-            'userid' => $userid,
-            'body' => $text,
-            'bodyformat' => $format,
-            'attachsetid' => $setid,
-            'timeedited' => null,
-            'timecreated' => time(),
-        ]);
-        if ($setid) {
-            attachments::link_to_message($setid, $messageid);
-        }
-        if ($mentions) {
-            mentions::record_and_notify($conversation, $messageid, $userid, $mentions, $text, $format);
-        }
-        if (features::enabled(features::LINKPREVIEWS)) {
-            linkpreviews::queue_for_html($html);
+        // The message has gone. Nothing below may make the caller think it has not, or a
+        // retry would send it twice: failures are reported for debugging only.
+        try {
+            $DB->insert_record('local_messagingsupercharger_meta', (object)[
+                'messageid' => $messageid,
+                'conversationid' => $conversationid,
+                'userid' => $userid,
+                'body' => $text,
+                'bodyformat' => $format,
+                'attachsetid' => $setid,
+                'timeedited' => null,
+                'timecreated' => time(),
+            ]);
+            if ($setid) {
+                attachments::link_to_message($setid, $messageid);
+            }
+            if ($mentions) {
+                mentions::record_and_notify($conversation, $messageid, $userid, $mentions, $text, $format);
+            }
+            if (features::enabled(features::LINKPREVIEWS)) {
+                linkpreviews::queue_for_html($html);
+            }
+        } catch (\Throwable $e) {
+            debugging(
+                'local_messagingsupercharger: after sending message ' . $messageid . ': ' . $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
         }
         return $DB->get_record('messages', ['id' => $messageid], '*', MUST_EXIST);
     }

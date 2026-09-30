@@ -33,6 +33,7 @@ import Selectors from 'local_messagingsupercharger/selectors';
 import * as Repository from 'local_messagingsupercharger/repository';
 import {config, enabled, str} from 'local_messagingsupercharger/state';
 import {el, button, icon, isolate, formatTime} from 'local_messagingsupercharger/dom';
+import {prepare as prepareImages} from 'local_messagingsupercharger/image_viewer';
 
 const DECOR = 'msgsc-decor';
 
@@ -77,6 +78,7 @@ export default class Decorations {
         let fresh = false;
         this.messageElements().forEach((node) => {
             const id = node.getAttribute('data-message-id');
+            prepareImages(node.querySelector(Selectors.MESSAGE_TEXT));
             if (!/^\d+$/.test(id)) {
                 return;
             }
@@ -148,8 +150,11 @@ export default class Decorations {
      * @param {HTMLElement} node
      */
     markGone(node) {
-        node.hidden = true;
+        // Core's message element has Bootstrap's d-flex, whose display:flex !important
+        // beats the hidden attribute; only an important inline style wins.
+        node.style.setProperty('display', 'none', 'important');
         node.setAttribute('aria-hidden', 'true');
+        node.setAttribute('tabindex', '-1');
     }
 
     /**
@@ -168,11 +173,23 @@ export default class Decorations {
             if (text) {
                 // Formatted and cleaned by core's message_format_message_text() on the server.
                 text.innerHTML = data.text;
+                prepareImages(text);
             }
             data.text = '';
         }
-        this.fillPreviews(decor.querySelector('.msgsc-previews'), data.previews);
-        this.fillReactions(decor.querySelector('.msgsc-reactions'), data);
+        // Rebuilding only on change keeps keyboard focus on a reaction or preview across polls.
+        const previews = decor.querySelector('.msgsc-previews');
+        const previewsKey = JSON.stringify(data.previews || []);
+        if (previews.dataset.key !== previewsKey) {
+            previews.dataset.key = previewsKey;
+            this.fillPreviews(previews, data.previews);
+        }
+        const reactions = decor.querySelector('.msgsc-reactions');
+        const reactionsKey = JSON.stringify([data.reactions || [], this.canReact()]);
+        if (reactions.dataset.key !== reactionsKey) {
+            reactions.dataset.key = reactionsKey;
+            this.fillReactions(reactions, data);
+        }
         const edited = decor.querySelector('.msgsc-edited');
         edited.hidden = !data.edited;
         edited.textContent = data.edited ? str('edited', formatTime(data.timeedited)) : '';
@@ -192,6 +209,9 @@ export default class Decorations {
     fillPreviews(container, previews) {
         container.textContent = '';
         (previews || []).forEach((preview) => {
+            if (!/^https?:\/\//i.test(preview.url)) {
+                return;
+            }
             const children = [];
             if (preview.imageurl) {
                 children.push(el('img', {src: preview.imageurl, alt: '', className: 'msgsc-preview-image'}));
@@ -212,6 +232,8 @@ export default class Decorations {
      * @param {Object} data
      */
     fillReactions(container, data) {
+        const focused = container.contains(document.activeElement)
+            ? document.activeElement.getAttribute('data-reaction') : null;
         container.textContent = '';
         if (!enabled('reactions')) {
             return;
@@ -239,6 +261,12 @@ export default class Decorations {
             pill.addEventListener('click', () => this.toggleReaction(data.id, entry.key));
             container.appendChild(pill);
         });
+        if (focused) {
+            const again = container.querySelector(`[data-reaction="${focused}"]`);
+            if (again) {
+                again.focus();
+            }
+        }
     }
 
     /**
@@ -405,6 +433,7 @@ export default class Decorations {
             if (text) {
                 // Formatted and cleaned by core's message_format_message_text() on the server.
                 text.innerHTML = e.detail.text;
+                prepareImages(text);
             }
             const data = this.byId[String(messageid)];
             if (data) {

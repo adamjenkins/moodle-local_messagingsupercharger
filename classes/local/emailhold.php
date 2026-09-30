@@ -181,7 +181,9 @@ class emailhold {
         }
         $recipient = \core_user::get_user($row->useridto);
         $sender = \core_user::get_user($row->useridfrom);
-        if (!$recipient || !$sender || $recipient->deleted || $recipient->suspended || !empty($recipient->emailstop)) {
+        // No emailstop check: core already applied it (or a forced setting overrode it) when it
+        // chose to call the email processor for this recipient.
+        if (!$recipient || !$sender || $recipient->deleted || $recipient->suspended) {
             return false;
         }
         if (

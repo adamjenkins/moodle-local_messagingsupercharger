@@ -84,6 +84,10 @@ conversation, the system otherwise, so they can be overridden per course.
 Pinning: in a one-to-one conversation either person may pin; in a group conversation only
 people with `pinmessage` in the course may, because a pin is shown to the whole group.
 
+`userichtext` controls the rich text editor. It is not a content filter: Moodle's own
+messaging web services also accept formatted text, and every message is cleaned by
+Moodle's HTML cleaning when it is shown, whichever way it was written.
+
 All of Moodle's own messaging rules still apply: blocking, "contacts only" privacy,
 messaging disabled, conversation membership and disabled group conversations. Scheduled
 messages are checked again when they are sent.
@@ -104,7 +108,13 @@ messages are checked again when they are sent.
   server, so readers' browsers never contact the linked site. A proxy is never used, so
   on sites that need one there are no previews.
 - The Privacy API provider covers every table and the file area (export and delete, per
-  user and per context).
+  user and per context). Deleting a person's data deletes the files they attached, also in
+  group conversations whose messages Moodle keeps in the course; those messages then list
+  the attachments without the files. Pins they made are kept for the conversation without
+  their name.
+- Link previews are kept once fetched (one per address), because they are only ever
+  fetched when a message is sent. Preview images are shown only to people who can see a
+  message containing the link.
 
 ## The Moodle app and other clients
 

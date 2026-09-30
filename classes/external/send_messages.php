@@ -58,9 +58,20 @@ class send_messages extends external_api {
             ),
             'messages' => new external_multiple_structure(new external_single_structure([
                 'text' => new external_value(PARAM_RAW, 'Message text'),
-                'format' => new external_value(PARAM_INT, 'FORMAT_PLAIN or FORMAT_HTML', VALUE_DEFAULT, FORMAT_PLAIN),
+                'format' => new external_value(
+                    PARAM_INT,
+                    'FORMAT_PLAIN (drawer text with extras), FORMAT_HTML or FORMAT_MOODLE',
+                    VALUE_DEFAULT,
+                    FORMAT_PLAIN
+                ),
                 'draftitemid' => new external_value(PARAM_INT, 'Draft area of attachments', VALUE_DEFAULT, 0),
                 'editordraftitemid' => new external_value(PARAM_INT, 'Draft area of embedded images', VALUE_DEFAULT, 0),
+                'filenames' => new external_multiple_structure(
+                    new external_value(PARAM_FILE, 'File name'),
+                    'Attach only these files from the draft area (empty for all of them)',
+                    VALUE_DEFAULT,
+                    []
+                ),
                 'mentions' => new external_multiple_structure(
                     new external_value(PARAM_INT, 'Mentioned user id'),
                     'Mentioned users',
@@ -100,6 +111,19 @@ class send_messages extends external_api {
         $conversation = conversations::get($conversationid);
         $candeleteforall = has_capability('moodle/site:deleteanymessage', conversations::context($conversation));
 
+        // Check every message before sending any, so that a batch never half-sends.
+        foreach ($params['messages'] as $message) {
+            sender::precheck(
+                (int)$USER->id,
+                $conversationid,
+                $message['text'],
+                (int)$message['format'],
+                (int)$message['draftitemid'],
+                (int)$message['editordraftitemid'],
+                $message['mentions'],
+                $message['filenames'] ?: null
+            );
+        }
         $results = [];
         foreach ($params['messages'] as $message) {
             $sent = sender::send(
@@ -109,7 +133,9 @@ class send_messages extends external_api {
                 (int)$message['format'],
                 (int)$message['draftitemid'],
                 (int)$message['editordraftitemid'],
-                $message['mentions']
+                $message['mentions'],
+                null,
+                $message['filenames'] ?: null
             );
             $results[] = [
                 'id' => (int)$sent->id,

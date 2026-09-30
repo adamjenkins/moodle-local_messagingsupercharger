@@ -24,6 +24,7 @@ use core_privacy\local\request\transform;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use local_messagingsupercharger\local\attachments;
+use local_messagingsupercharger\local\cleanup;
 use local_messagingsupercharger\local\extras;
 
 /**
@@ -101,12 +102,15 @@ class provider implements
             'conversationid' => 'privacy:metadata:local_messagingsupercharger_sched:conversationid',
             'body' => 'privacy:metadata:local_messagingsupercharger_sched:body',
             'timesend' => 'privacy:metadata:local_messagingsupercharger_sched:timesend',
+            'mentions' => 'privacy:metadata:local_messagingsupercharger_sched:mentions',
+            'status' => 'privacy:metadata:local_messagingsupercharger_sched:status',
         ], 'privacy:metadata:local_messagingsupercharger_sched');
         $collection->add_database_table('local_messagingsupercharger_emailq', [
             'messageid' => 'privacy:metadata:local_messagingsupercharger_emailq:messageid',
             'useridfrom' => 'privacy:metadata:local_messagingsupercharger_emailq:useridfrom',
             'useridto' => 'privacy:metadata:local_messagingsupercharger_emailq:useridto',
             'timedue' => 'privacy:metadata:local_messagingsupercharger_emailq:timedue',
+            'subject' => 'privacy:metadata:local_messagingsupercharger_emailq:subject',
         ], 'privacy:metadata:local_messagingsupercharger_emailq');
         $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
         $collection->add_subsystem_link('core_message', [], 'privacy:metadata:core_message');
@@ -224,7 +228,8 @@ class provider implements
         $scheduled = [];
         foreach ($DB->get_records('local_messagingsupercharger_sched', ['userid' => $userid], 'timesend, id') as $row) {
             $scheduled[] = ['conversationid' => $row->conversationid, 'text' => $row->body,
-                'timesend' => transform::datetime($row->timesend)];
+                'timesend' => transform::datetime($row->timesend), 'mentions' => $row->mentions,
+                'failed' => transform::yesno((int)$row->status === 1)];
         }
         if ($scheduled) {
             self::export_section($writer, $root, 'privacy:scheduled', ['scheduled' => $scheduled]);
@@ -237,7 +242,8 @@ class provider implements
             [$userid, $userid]
         );
         foreach ($emailrows as $row) {
-            $emails[] = ['messageid' => $row->messageid, 'timedue' => transform::datetime($row->timedue)];
+            $emails[] = ['messageid' => $row->messageid, 'subject' => $row->subject,
+                'timedue' => transform::datetime($row->timedue)];
         }
         if ($emails) {
             self::export_section($writer, $root, 'privacy:heldemails', ['emails' => $emails]);
@@ -293,14 +299,24 @@ class provider implements
      */
     protected static function delete_user(int $userid): void {
         global $DB;
+        // The person's own files go, including those attached to group messages that core
+        // keeps in the course: they are this person's data. Those messages then show their
+        // attachment names without the files.
         foreach ($DB->get_fieldset_select('local_messagingsupercharger_attach', 'id', 'userid = ?', [$userid]) as $setid) {
             attachments::delete_set((int)$setid);
         }
         foreach (self::USER_COLUMNS as $table => $columns) {
             foreach ($columns as $column) {
+                if ($table === 'local_messagingsupercharger_pin') {
+                    continue;
+                }
                 $DB->delete_records($table, [$column => $userid]);
             }
         }
+        // A pin belongs to the conversation: keep it for the other members, without the
+        // person who pinned it (as when a user is deleted).
+        $DB->set_field('local_messagingsupercharger_pin', 'userid', 0, ['userid' => $userid]);
+        cleanup::remove_from_scheduled_mentions($userid);
     }
 
     /**

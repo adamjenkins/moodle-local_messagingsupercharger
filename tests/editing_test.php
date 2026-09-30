@@ -89,7 +89,7 @@ final class editing_test extends \advanced_testcase {
             FORMAT_MOODLE
         );
         $this->assertSame(
-            ['text' => 'From core', 'format' => (int)FORMAT_PLAIN],
+            ['text' => 'From core', 'format' => (int)FORMAT_MOODLE],
             editing::get_editable((int)$message->id, (int)$this->alice->id)
         );
         $edited = editing::edit((int)$message->id, (int)$this->alice->id, 'From core, edited');
@@ -189,9 +189,58 @@ final class editing_test extends \advanced_testcase {
         $message = sender::send((int)$this->alice->id, (int)$group->id, 'In the group', FORMAT_PLAIN);
         reactions::toggle((int)$message->id, (int)$carol->id, 'party');
         groups_delete_group($group->groupid);
+        // The group_deleted observer queues one sweep.
+        $this->runAdhocTasks(task\sweep_orphans::class);
         $this->assertFalse($DB->record_exists('messages', ['id' => $message->id]));
         $this->assertSame(0, $DB->count_records('local_messagingsupercharger_reaction', ['messageid' => $message->id]));
         $this->assertSame(0, $DB->count_records('local_messagingsupercharger_meta', ['messageid' => $message->id]));
+    }
+
+    public function test_delete_for_all_removes_group_digest_email(): void {
+        global $DB;
+        $carol = $this->getDataGenerator()->create_user();
+        $group = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
+            ->create_group_conversation([$this->alice, $carol]);
+        $message = sender::send((int)$this->alice->id, (int)$group->id, 'Oops, wrong group', FORMAT_PLAIN);
+        // What core's email processor queues for the 22:00 digest.
+        $DB->insert_record('message_email_messages', (object)['useridto' => $carol->id,
+            'conversationid' => $group->id, 'messageid' => $message->id]);
+        editing::delete_for_all((int)$message->id, (int)$this->alice->id);
+        $this->assertFalse($DB->record_exists('message_email_messages', ['messageid' => $message->id]));
+        $this->assertFalse($DB->record_exists('local_messagingsupercharger_meta', ['messageid' => $message->id]));
+    }
+
+    public function test_group_delete_for_me_keeps_data_for_later_members(): void {
+        global $DB;
+        $carol = $this->getDataGenerator()->create_user();
+        $group = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
+            ->create_group_conversation([$this->alice, $carol]);
+        $draftitemid = file_get_unused_draft_itemid();
+        $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
+            ->create_draft_file($this->alice, $draftitemid, 'keep.txt');
+        $message = sender::send((int)$this->alice->id, (int)$group->id, 'For the group', FORMAT_PLAIN, $draftitemid);
+        // Every current member deletes it for themselves.
+        api::delete_message((int)$this->alice->id, (int)$message->id);
+        api::delete_message((int)$carol->id, (int)$message->id);
+        // Someone who joins later still sees the message, so its files must stay.
+        $this->assertTrue($DB->record_exists('local_messagingsupercharger_attach', ['messageid' => $message->id]));
+        $this->assertTrue($DB->record_exists('local_messagingsupercharger_meta', ['messageid' => $message->id]));
+    }
+
+    public function test_editing_a_core_formatted_message_keeps_its_format(): void {
+        global $DB;
+        $message = api::send_message_to_conversation(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            '<b>deadline</b> Friday',
+            FORMAT_MOODLE
+        );
+        editing::edit((int)$message->id, (int)$this->alice->id, '<b>deadline</b> Saturday');
+        $row = $DB->get_record('messages', ['id' => $message->id]);
+        $this->assertEquals(FORMAT_MOODLE, $row->fullmessageformat);
+        $this->assertSame('<b>deadline</b> Saturday', $row->smallmessage);
+        $this->setUser($this->bob);
+        $this->assertStringContainsString('<b>deadline</b>', sender::format_for_display($row));
     }
 
     public function test_user_deletion_purges_their_plugin_data(): void {

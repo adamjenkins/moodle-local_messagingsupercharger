@@ -192,6 +192,18 @@ final class emailhold_test extends \advanced_testcase {
         $this->assertSame(0, $sink->count());
     }
 
+    public function test_emailstop_set_during_hold_does_not_drop_the_email(): void {
+        // Core decided at send time that this person gets the email (a forced setting can
+        // override emailstop); the hold must not change that decision.
+        $sink = $this->redirectEmails();
+        $this->send('Still coming');
+        set_user_preference('emailstop', 1, $this->recipient);
+        $GLOBALS['DB']->set_field('user', 'emailstop', 1, ['id' => $this->recipient->id]);
+        $this->make_due();
+        $this->assertSame(1, emailhold::send_due());
+        $this->assertSame(1, $sink->count());
+    }
+
     public function test_claimed_row_is_never_sent_twice(): void {
         global $DB;
         $sink = $this->redirectEmails();

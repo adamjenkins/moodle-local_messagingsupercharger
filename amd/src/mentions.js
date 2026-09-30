@@ -25,7 +25,6 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import Notification from 'core/notification';
 import Pending from 'core/pending';
 import Selectors from 'local_messagingsupercharger/selectors';
 import * as Repository from 'local_messagingsupercharger/repository';
@@ -82,6 +81,7 @@ export default class Mentions {
         this.list = el('ul', {id: uniqueId('msgsc-mentions'), className: 'msgsc-mention-list list-unstyled',
             role: 'listbox', 'aria-label': str('mentionlist'), hidden: true});
         textarea.parentNode.parentNode.insertBefore(this.list, textarea.parentNode);
+        textarea.setAttribute('role', 'combobox');
         textarea.setAttribute('aria-autocomplete', 'list');
         textarea.setAttribute('aria-controls', this.list.id);
         textarea.setAttribute('aria-expanded', 'false');
@@ -155,7 +155,10 @@ export default class Mentions {
                 this.render();
             }
             return candidates;
-        }).catch(Notification.exception).then(() => pending.resolve()).catch(() => pending.resolve());
+        }).catch(() => {
+            // A failed suggestion lookup just shows no suggestions.
+            this.close();
+        }).then(() => pending.resolve()).catch(() => pending.resolve());
     }
 
     /**
@@ -190,6 +193,8 @@ export default class Mentions {
         });
         this.list.hidden = false;
         textarea.setAttribute('aria-expanded', 'true');
+        this.controller.composer.announce(this.candidates.length ? `${this.candidates.length} ${str('mentionlist')}`
+            : str('nomentions'));
         if (this.active >= 0) {
             textarea.setAttribute('aria-activedescendant', `${this.list.id}-${this.candidates[this.active].id}`);
         } else {

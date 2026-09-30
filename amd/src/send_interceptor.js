@@ -38,7 +38,8 @@ import Ajax from 'core/ajax';
 const CORE_SEND_TO_CONVERSATION = 'core_message_send_messages_to_conversation';
 const CORE_SEND_TO_USER = 'core_message_send_instant_messages';
 const PLUGIN_SEND = 'local_messagingsupercharger_send_messages';
-const FORMAT_PLAIN = 2;
+/** What core's web services assume when the drawer sends no format (externallib.php). */
+const FORMAT_MOODLE = 0;
 
 let installed = false;
 let queue = [];
@@ -47,7 +48,7 @@ let queue = [];
  * Register extras for the next message sent with this exact text.
  *
  * @param {String} text The text as the drawer will send it (trimmed)
- * @param {Object} payload {text, format, draftitemid, editordraftitemid, mentions}
+ * @param {Object} payload {text, format, draftitemid, editordraftitemid, filenames, mentions}
  */
 export const register = (text, payload) => {
     queue.push({text: text.trim(), payload});
@@ -78,26 +79,34 @@ const take = (text) => {
  * Rewrite one request if it is a drawer send carrying registered extras.
  *
  * @param {Object} request A core/ajax request
+ * @returns {Array|null} The [text, payload] pairs used, or null if the request was left alone
  */
 const rewrite = (request) => {
     if (!request || !request.args || !Array.isArray(request.args.messages)) {
-        return;
+        return null;
     }
     if (request.methodname !== CORE_SEND_TO_CONVERSATION && request.methodname !== CORE_SEND_TO_USER) {
-        return;
+        return null;
     }
     const payloads = request.args.messages.map((message) => take(message.text));
     if (!payloads.some((payload) => payload)) {
-        return;
+        return null;
     }
+    const texts = request.args.messages.map((message) => String(message.text).trim());
     const messages = request.args.messages.map((message, index) => {
         const payload = payloads[index];
+        if (!payload) {
+            // An ordinary message queued alongside: send it exactly as core would.
+            return {text: message.text, format: FORMAT_MOODLE, draftitemid: 0, editordraftitemid: 0, filenames: [],
+                mentions: []};
+        }
         return {
-            text: payload ? payload.text : message.text,
-            format: payload ? payload.format : FORMAT_PLAIN,
-            draftitemid: payload ? payload.draftitemid || 0 : 0,
-            editordraftitemid: payload ? payload.editordraftitemid || 0 : 0,
-            mentions: payload ? payload.mentions || [] : [],
+            text: payload.text,
+            format: payload.format,
+            draftitemid: payload.draftitemid || 0,
+            editordraftitemid: payload.editordraftitemid || 0,
+            filenames: payload.filenames || [],
+            mentions: payload.mentions || [],
         };
     });
     if (request.methodname === CORE_SEND_TO_CONVERSATION) {
@@ -106,6 +115,7 @@ const rewrite = (request) => {
         request.args = {conversationid: 0, touserid: request.args.messages[0].touserid, messages};
     }
     request.methodname = PLUGIN_SEND;
+    return payloads.map((payload, index) => (payload ? [texts[index], payload] : null)).filter((pair) => pair);
 };
 
 /**
@@ -118,9 +128,18 @@ export const install = () => {
     installed = true;
     const original = Ajax.call;
     Ajax.call = function(requests, ...rest) {
-        if (queue.length && Array.isArray(requests)) {
-            requests.forEach(rewrite);
+        if (!queue.length || !Array.isArray(requests)) {
+            return original.call(this, requests, ...rest);
         }
-        return original.call(this, requests, ...rest);
+        const used = requests.map(rewrite);
+        const promises = original.call(this, requests, ...rest);
+        // If a rerouted send fails, put its extras back, so that core's "Retry" (which
+        // resends the same text) is rerouted again rather than sent without them.
+        used.forEach((pairs, index) => {
+            if (pairs && promises && promises[index] && promises[index].fail) {
+                promises[index].fail(() => pairs.forEach(([text, payload]) => register(text, payload)));
+            }
+        });
+        return promises;
     };
 };

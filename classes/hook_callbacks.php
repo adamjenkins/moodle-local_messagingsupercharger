@@ -65,7 +65,6 @@ class hook_callbacks {
         return [
             'userid' => (int)$USER->id,
             'features' => $enabled,
-            'draftitemid' => $enabled[features::ATTACHMENTS] ? file_get_unused_draft_itemid() : 0,
             'maxattachmentsize' => features::max_attachment_size(),
             'maxattachmentsizetext' => display_size(features::max_attachment_size()),
             'maxattachments' => features::max_attachments(),

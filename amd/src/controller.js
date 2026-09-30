@@ -106,7 +106,12 @@ export default class Controller {
      */
     conversationVisible() {
         const body = this.root.querySelector(Selectors.BODY_CONTAINER + ' ' + Selectors.VIEW_CONVERSATION);
-        return !!(body && body.getAttribute('aria-hidden') !== 'true' && !body.classList.contains('hidden'));
+        if (!body || body.getAttribute('aria-hidden') === 'true' || body.classList.contains('hidden')) {
+            return false;
+        }
+        // Closing the drawer hides only its outer container (core/drawer), not the view inside.
+        const drawer = this.root.closest(Selectors.DRAWER_CONTAINER);
+        return !(drawer && (drawer.classList.contains('hidden') || drawer.getAttribute('aria-hidden') === 'true'));
     }
 
     /**
@@ -235,10 +240,14 @@ export default class Controller {
                 if (extras.conversationid !== this.conversationId) {
                     return extras;
                 }
+                const first = !this.extras;
                 this.extras = extras;
                 this.since = extras.servertime;
                 this.composer.applyPermissions(extras.permissions);
-                this.mentions.recheck();
+                if (first) {
+                    // "@" may have been typed before the permissions arrived.
+                    this.mentions.recheck();
+                }
                 this.decorations.apply(extras);
                 this.strip.render(extras);
                 return extras;

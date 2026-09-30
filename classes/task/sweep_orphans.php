@@ -14,19 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_messagingsupercharger\task;
+
+use local_messagingsupercharger\local\cleanup;
+
 /**
- * Version information for local_messagingsupercharger.
+ * Removes plugin data orphaned by a group or course deletion, soon after it happens.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'local_messagingsupercharger';
-$plugin->version = 2026093002;
-$plugin->requires = 2026042000; // Moodle 5.2.
-$plugin->supported = [502, 503];
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.1.0';
+class sweep_orphans extends \core\task\adhoc_task {
+    /**
+     * Sweep.
+     */
+    public function execute() {
+        cleanup::sweep();
+    }
+}

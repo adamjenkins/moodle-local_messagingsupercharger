@@ -26,12 +26,11 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Selectors from 'local_messagingsupercharger/selectors';
 import {enabled, str} from 'local_messagingsupercharger/state';
 import {el} from 'local_messagingsupercharger/dom';
 
 const STORAGE_KEY = 'local_messagingsupercharger_drawerwidth';
-/** The drawer container from core/drawer.mustache. */
-const CONTAINER = '[data-region="right-hand-drawer"]';
 const MIN_WIDTH = 280;
 const MIN_SCREEN = 768;
 const STEP = 20;
@@ -84,7 +83,7 @@ export const ensure = (root) => {
     if (!enabled('resizabledrawer') || root.getAttribute('data-region') !== 'message-drawer') {
         return;
     }
-    const container = root.closest(CONTAINER);
+    const container = root.closest(Selectors.DRAWER_CONTAINER);
     if (!container || root.querySelector(':scope > .msgsc-resize-handle')) {
         return;
     }

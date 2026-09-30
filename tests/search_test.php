@@ -70,6 +70,21 @@ final class search_test extends \advanced_testcase {
         $this->assertSame(['The banana plan'], array_column(search::messages((int)$ann->id, 'banana')['results'], 'snippet'));
     }
 
+    public function test_personal_space_is_named(): void {
+        global $CFG;
+        require_once($CFG->dirroot . '/message/lib.php');
+        $this->resetAfterTest();
+        $this->redirectMessages();
+        $ann = $this->getDataGenerator()->create_user();
+        $self = \core_message\api::get_self_conversation($ann->id)
+            ?: \core_message\api::create_conversation(\core_message\api::MESSAGE_CONVERSATION_TYPE_SELF, [$ann->id]);
+        $this->setUser($ann);
+        sender::send((int)$ann->id, (int)$self->id, 'note to self: groceries', FORMAT_PLAIN);
+        $results = search::messages((int)$ann->id, 'groceries')['results'];
+        $this->assertSame(get_string('selfconversation', 'core_message'), $results[0]['conversationname']);
+        $this->assertDebuggingNotCalled();
+    }
+
     public function test_paging(): void {
         global $CFG;
         require_once($CFG->dirroot . '/message/lib.php');

@@ -71,7 +71,7 @@ class get_mention_candidates extends external_api {
     public static function execute_returns(): external_multiple_structure {
         return new external_multiple_structure(new external_single_structure([
             'id' => new external_value(PARAM_INT, 'User id'),
-            'fullname' => new external_value(PARAM_TEXT, 'Full name'),
+            'fullname' => new external_value(PARAM_RAW, 'Full name'),
             'profileimageurl' => new external_value(PARAM_URL, 'Picture'),
         ]));
     }

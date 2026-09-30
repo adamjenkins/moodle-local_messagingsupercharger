@@ -116,12 +116,21 @@
     max-width: 100%;
 }
 
-/* As wide as the panel allows, never larger than the image itself. */
+/* As wide as the panel allows, never larger than the image itself (the script caps
+   each picture at its real width once it has loaded). */
 .msgsc-attachment-thumb,
-[data-region="text-container"] img {
+[data-region="message-drawer"] [data-region="text-container"] img,
+[data-region="message-index"] [data-region="text-container"] img {
     max-width: 100%;
     height: auto;
     border-radius: var(--bs-border-radius);
+}
+
+.msgsc-picture.msgsc-sized {
+    width: 100%;
+}
+
+.msgsc-picture {
     cursor: zoom-in;
 }
 

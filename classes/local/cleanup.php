@@ -37,8 +37,8 @@ class cleanup {
     /** @var int Unsent attachment sets older than this are abandoned uploads. */
     const ABANDONED_AFTER = DAYSECS;
 
-    /** @var int Link previews are refetched after this long. */
-    const PREVIEW_LIFETIME = 30 * DAYSECS;
+    /** @var int Failed scheduled messages are kept this long for their author to see. */
+    const FAILED_RETENTION = 30 * DAYSECS;
 
     /**
      * Remove all plugin data about one message.
@@ -94,6 +94,31 @@ class cleanup {
         $DB->delete_records('local_messagingsupercharger_emailq', ['useridto' => $userid]);
         $DB->delete_records('local_messagingsupercharger_emailq', ['useridfrom' => $userid]);
         $DB->set_field('local_messagingsupercharger_pin', 'userid', 0, ['userid' => $userid]);
+        self::remove_from_scheduled_mentions($userid);
+    }
+
+    /**
+     * Take a user out of the mention lists of other people's pending scheduled messages.
+     *
+     * @param int $userid
+     */
+    public static function remove_from_scheduled_mentions(int $userid): void {
+        global $DB;
+        $like = $DB->sql_like('mentions', ':pattern');
+        $rows = $DB->get_records_select(
+            'local_messagingsupercharger_sched',
+            $like,
+            ['pattern' => '%' . $DB->sql_like_escape((string)$userid) . '%'],
+            '',
+            'id, mentions'
+        );
+        foreach ($rows as $row) {
+            $ids = json_decode((string)$row->mentions, true) ?: [];
+            $kept = array_values(array_filter($ids, fn($id) => (int)$id !== $userid));
+            if (count($kept) !== count($ids)) {
+                $DB->set_field('local_messagingsupercharger_sched', 'mentions', json_encode($kept), ['id' => $row->id]);
+            }
+        }
     }
 
     /**
@@ -124,11 +149,25 @@ class cleanup {
             attachments::delete_set((int)$setid);
         }
 
-        // Scheduled messages whose conversation is gone.
-        $sql = "SELECT s.id
-                  FROM {local_messagingsupercharger_sched} s
-                 WHERE NOT EXISTS (SELECT 1 FROM {message_conversations} c WHERE c.id = s.conversationid)";
-        foreach ($DB->get_fieldset_sql($sql) as $id) {
+        // Scheduled messages whose conversation is gone: keep them, marked failed, so the
+        // author can see what happened (see scheduler), and remove them after a while.
+        $DB->execute("UPDATE {local_messagingsupercharger_sched}
+                         SET status = :failed, failreason = :reason, timemodified = :now
+                       WHERE status <> :failed2
+                         AND NOT EXISTS (SELECT 1 FROM {message_conversations} c
+                                          WHERE c.id = {local_messagingsupercharger_sched}.conversationid)", [
+            'failed' => scheduler::STATUS_FAILED,
+            'failed2' => scheduler::STATUS_FAILED,
+            'reason' => 'failednoconversation',
+            'now' => time(),
+        ]);
+        $old = $DB->get_fieldset_select(
+            'local_messagingsupercharger_sched',
+            'id',
+            'status = ? AND timemodified < ?',
+            [scheduler::STATUS_FAILED, time() - self::FAILED_RETENTION]
+        );
+        foreach ($old as $id) {
             self::purge_scheduled((int)$id);
         }
 
@@ -139,18 +178,7 @@ class cleanup {
             [time() - DAYSECS]
         );
 
-        // Stale link previews.
-        $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
-        $old = $DB->get_fieldset_select(
-            'local_messagingsupercharger_preview',
-            'id',
-            'timefetched < ?',
-            [time() - self::PREVIEW_LIFETIME]
-        );
-        foreach ($old as $id) {
-            $fs->delete_area_files($syscontextid, features::COMPONENT, attachments::AREA_PREVIEW, $id);
-            $DB->delete_records('local_messagingsupercharger_preview', ['id' => $id]);
-        }
+        // Link previews are kept: they are fetched only when a message is sent, never when
+        // it is read, so a deleted preview could not come back. They are small, one per URL.
     }
 }

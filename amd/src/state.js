@@ -29,12 +29,12 @@ const COMPONENT = 'local_messagingsupercharger';
 const STRING_KEYS = [
     'attachfile', 'attachments', 'richeditor', 'schedulesend', 'dropfiles', 'uploading', 'removeattachment',
     'messageactions', 'addreaction', 'editmessage', 'deleteforeveryone', 'pinmessage', 'unpinmessage',
-    'showhistory', 'edited', 'seenby', 'pinned', 'scheduled', 'editscheduled', 'cancelscheduled',
+    'showhistory', 'edited', 'seenby', 'pinned', 'editscheduled', 'cancelscheduled',
     'failed', 'searchmessages', 'searchplaceholder', 'noresults', 'loadmore', 'mentionlist', 'nomentions',
-    'confirmdeleteforall', 'confirmcancelscheduled', 'showseenby', 'showseenby_desc', 'history', 'current',
+    'confirmdeleteforall', 'confirmcancelscheduled', 'showseenby', 'showseenby_desc', 'history',
     'jumptomessage', 'reactedwith', 'sendat', 'linkpreview', 'attachmentonly', 'schedulesaved',
     'toomanyattachmentsjs', 'attachmenttoolargejs', 'attachmenttypejs', 'pinnedcount', 'scheduledcount',
-    'openmodalerror', 'deleted', 'send', 'seenbyheading', 'resizedrawer', 'imagefit', 'imageoriginal', 'imageviewer',
+    'send', 'seenbyheading', 'resizedrawer', 'imagefit', 'imageoriginal', 'imageviewer',
 ];
 
 const state = {

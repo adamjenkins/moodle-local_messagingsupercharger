@@ -15,18 +15,23 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Version information for local_messagingsupercharger.
+ * Uninstall steps for local_messagingsupercharger.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'local_messagingsupercharger';
-$plugin->version = 2026093002;
-$plugin->requires = 2026042000; // Moodle 5.2.
-$plugin->supported = [502, 503];
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.1.0';
+/**
+ * Before the plugin's tables go: send the message emails it is still holding back (core
+ * skipped them, so otherwise they would never be sent), and remove its user preference.
+ *
+ * @return bool
+ */
+function xmldb_local_messagingsupercharger_uninstall() {
+    global $DB;
+    $DB->set_field('local_messagingsupercharger_emailq', 'timedue', 0, ['claimtoken' => null]);
+    \local_messagingsupercharger\local\emailhold::send_due();
+    $DB->delete_records('user_preferences', ['name' => \local_messagingsupercharger\local\extras::PREF_SEENBY]);
+    return true;
+}

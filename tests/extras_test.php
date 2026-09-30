@@ -182,6 +182,26 @@ final class extras_test extends \advanced_testcase {
         $this->assertFalse($result['permissions']['canpin']);
     }
 
+    public function test_markup_like_text_does_not_break_the_web_services(): void {
+        // Text such as "<br>" in a pinned message or a search excerpt used to make core's
+        // return value checks throw, breaking the whole conversation for everyone.
+        $message = $this->send_and_read('use the <br> tag');
+        $teacher = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $this->group->courseid, 'editingteacher');
+        groups_add_member($this->group->groupid, $teacher->id);
+        pins::set((int)$message->id, (int)$teacher->id, true);
+        $this->setUser($this->users['ben']);
+        $result = external\get_conversation_extras::execute((int)$this->group->id, [(int)$message->id], 0);
+        $result = \core_external\external_api::clean_returnvalue(
+            external\get_conversation_extras::execute_returns(),
+            $result
+        );
+        $this->assertSame('use the <br> tag', $result['pins'][0]['text']);
+        $search = external\search_messages::execute('br> tag', 0, 20);
+        $search = \core_external\external_api::clean_returnvalue(external\search_messages::execute_returns(), $search);
+        $this->assertStringContainsString('<br> tag', $search['results'][0]['snippet']);
+    }
+
     public function test_extras_refused_to_non_members(): void {
         $outsider = $this->getDataGenerator()->create_user();
         $this->setUser($outsider);

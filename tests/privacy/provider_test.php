@@ -149,6 +149,8 @@ final class provider_test extends provider_testcase {
         $this->assert_ann_gone();
         // Ben's data stays.
         $this->assertSame(1, $DB->count_records('local_messagingsupercharger_reaction', ['userid' => $this->ben->id]));
+        // The pin Ann made stays for the conversation, no longer linked to her.
+        $this->assertSame(1, $DB->count_records('local_messagingsupercharger_pin', ['userid' => 0]));
         $this->assertSame(1, $DB->count_records('local_messagingsupercharger_mention', ['userid' => $this->ben->id]));
     }
 

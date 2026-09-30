@@ -73,10 +73,10 @@ class search_messages extends external_api {
             'results' => new external_multiple_structure(new external_single_structure([
                 'messageid' => new external_value(PARAM_INT, 'Message id'),
                 'conversationid' => new external_value(PARAM_INT, 'Conversation id'),
-                'conversationname' => new external_value(PARAM_TEXT, 'Conversation name'),
+                'conversationname' => new external_value(PARAM_RAW, 'Conversation name'),
                 'isgroup' => new external_value(PARAM_BOOL, 'Group conversation'),
-                'author' => new external_value(PARAM_TEXT, 'Sender'),
-                'snippet' => new external_value(PARAM_TEXT, 'Excerpt'),
+                'author' => new external_value(PARAM_RAW, 'Sender'),
+                'snippet' => new external_value(PARAM_RAW, 'Excerpt'),
                 'timecreated' => new external_value(PARAM_INT, 'Time sent'),
             ])),
             'hasmore' => new external_value(PARAM_BOOL, 'More results exist'),

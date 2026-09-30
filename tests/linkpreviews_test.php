@@ -115,6 +115,35 @@ final class linkpreviews_test extends \advanced_testcase {
         $this->assertSame('', $meta['image']);
     }
 
+    public function test_preview_images_only_for_people_who_can_see_the_link(): void {
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/message/lib.php');
+        $this->resetAfterTest();
+        set_config('emaildelay', 0, 'local_messagingsupercharger');
+        $this->redirectMessages();
+        $ann = $this->getDataGenerator()->create_user();
+        $ben = $this->getDataGenerator()->create_user();
+        $cat = $this->getDataGenerator()->create_user();
+        $conversation = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
+            ->create_individual_conversation($ann, $ben);
+        $this->setUser($ann);
+        $message = local\sender::send(
+            (int)$ann->id,
+            (int)$conversation->id,
+            'See https://example.com/a?b=1&c=2',
+            FORMAT_PLAIN
+        );
+        $previewid = $DB->insert_record('local_messagingsupercharger_preview', (object)['urlhash' => sha1('x'),
+            'url' => 'https://example.com/a?b=1&c=2', 'status' => linkpreviews::STATUS_OK, 'hasimage' => 1,
+            'timefetched' => time()]);
+        $this->assertTrue(linkpreviews::can_view_preview($previewid, (int)$ann->id));
+        $this->assertTrue(linkpreviews::can_view_preview($previewid, (int)$ben->id));
+        $this->assertFalse(linkpreviews::can_view_preview($previewid, (int)$cat->id));
+        \core_message\api::delete_message((int)$ben->id, (int)$message->id);
+        $this->assertFalse(linkpreviews::can_view_preview($previewid, (int)$ben->id));
+        $this->assertFalse(linkpreviews::can_view_preview($previewid + 1000, (int)$ann->id));
+    }
+
     public function test_previews_off_by_default_and_not_queued(): void {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/message/lib.php');

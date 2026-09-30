@@ -40,7 +40,7 @@ class scheduled_structure {
             'format' => new external_value(PARAM_INT, 'Text format'),
             'timesend' => new external_value(PARAM_INT, 'When it will be sent'),
             'failed' => new external_value(PARAM_BOOL, 'Could not be sent'),
-            'failreason' => new external_value(PARAM_TEXT, 'Why it could not be sent'),
+            'failreason' => new external_value(PARAM_RAW, 'Why it could not be sent'),
             'attachments' => new external_value(PARAM_INT, 'Number of attachments'),
         ]);
     }

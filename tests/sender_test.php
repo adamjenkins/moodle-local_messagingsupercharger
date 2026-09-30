@@ -105,6 +105,60 @@ final class sender_test extends \advanced_testcase {
         $this->assertStringContainsString('from-alice.txt', $message->smallmessage);
     }
 
+    public function test_only_named_files_are_attached(): void {
+        // A file abandoned (or still uploading) in the same draft area is not sent.
+        $this->redirectMessages();
+        $draftitemid = file_get_unused_draft_itemid();
+        $this->generator->create_draft_file($this->alice, $draftitemid, 'wanted.txt');
+        $this->generator->create_draft_file($this->alice, $draftitemid, 'abandoned.txt');
+        $message = sender::send(
+            $this->alice->id,
+            $this->conversation->id,
+            'One file',
+            FORMAT_PLAIN,
+            $draftitemid,
+            0,
+            [],
+            null,
+            ['wanted.txt']
+        );
+        $this->assertStringContainsString('wanted.txt', $message->smallmessage);
+        $this->assertStringNotContainsString('abandoned.txt', $message->smallmessage);
+        $left = array_map(fn($f) => $f->get_filename(), attachments::draft_files((int)$this->alice->id, $draftitemid));
+        $this->assertSame(['abandoned.txt'], $left);
+    }
+
+    public function test_batch_is_checked_before_anything_is_sent(): void {
+        global $DB;
+        $this->redirectMessages();
+        $before = $DB->count_records('messages');
+        try {
+            external\send_messages::execute((int)$this->conversation->id, 0, [
+                ['text' => 'Fine', 'format' => FORMAT_PLAIN, 'draftitemid' => 0, 'editordraftitemid' => 0, 'mentions' => [],
+                    'filenames' => []],
+                ['text' => str_repeat('x', 5000), 'format' => FORMAT_PLAIN, 'draftitemid' => 0, 'editordraftitemid' => 0,
+                    'mentions' => [], 'filenames' => []],
+            ]);
+            $this->fail('Too long a message was accepted');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('messagetoolong', $e->errorcode);
+        }
+        $this->assertSame($before, $DB->count_records('messages'));
+    }
+
+    public function test_ordinary_message_in_a_batch_is_sent_as_core_would(): void {
+        $this->redirectMessages();
+        $message = sender::send($this->alice->id, $this->conversation->id, '<b>hi</b>', FORMAT_MOODLE);
+        $this->assertEquals(FORMAT_MOODLE, $message->fullmessageformat);
+        $this->assertSame('<b>hi</b>', $message->smallmessage);
+    }
+
+    public function test_image_attributes_fit_the_cleaning_limit(): void {
+        $this->assertSame([1200, 400], attachments::fit_dimensions(3000, 1000));
+        $this->assertSame([300, 1200], attachments::fit_dimensions(1000, 4000));
+        $this->assertSame([640, 480], attachments::fit_dimensions(640, 480));
+    }
+
     public function test_attachment_only_message(): void {
         $this->redirectMessages();
         $draftitemid = file_get_unused_draft_itemid();

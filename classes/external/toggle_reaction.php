@@ -71,7 +71,7 @@ class toggle_reaction extends external_api {
                 'key' => new external_value(PARAM_ALPHANUMEXT, 'Reaction key'),
                 'count' => new external_value(PARAM_INT, 'How many'),
                 'reacted' => new external_value(PARAM_BOOL, 'Whether the viewer reacted'),
-                'names' => new external_multiple_structure(new external_value(PARAM_TEXT, 'Name')),
+                'names' => new external_multiple_structure(new external_value(PARAM_RAW, 'Name')),
             ])),
         ]);
     }

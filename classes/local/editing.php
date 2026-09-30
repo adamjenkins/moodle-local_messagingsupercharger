@@ -107,9 +107,8 @@ class editing {
         if ($meta) {
             return ['text' => (string)$meta->body, 'format' => (int)$meta->bodyformat];
         }
-        // Sent by core: its text is in smallmessage.
-        $format = sender::is_html($message->fullmessageformat) ? (int)FORMAT_HTML : (int)FORMAT_PLAIN;
-        return ['text' => (string)$message->smallmessage, 'format' => $format];
+        // Sent by core: its text is in smallmessage, in the format core stored.
+        return ['text' => (string)$message->smallmessage, 'format' => sender::normalise_format($message->fullmessageformat)];
     }
 
     /**
@@ -129,20 +128,19 @@ class editing {
         $meta = $DB->get_record('local_messagingsupercharger_meta', ['messageid' => $message->id]);
         $now = time();
         if (!$meta) {
-            $format = sender::is_html($message->fullmessageformat) ? (int)FORMAT_HTML : (int)FORMAT_PLAIN;
             $meta = (object)[
                 'messageid' => $message->id,
                 'conversationid' => $conversation->id,
                 'userid' => $userid,
                 'body' => (string)$message->smallmessage,
-                'bodyformat' => $format,
+                'bodyformat' => sender::normalise_format($message->fullmessageformat),
                 'attachsetid' => null,
                 'timeedited' => null,
                 'timecreated' => (int)$message->timecreated,
             ];
             $meta->id = $DB->insert_record('local_messagingsupercharger_meta', $meta);
         }
-        $format = sender::is_html($meta->bodyformat) ? (int)FORMAT_HTML : (int)FORMAT_PLAIN;
+        $format = sender::normalise_format($meta->bodyformat);
         if (sender::is_html($format)) {
             conversations::require_capability('userichtext', $conversation, $userid);
         }
@@ -157,7 +155,20 @@ class editing {
         if ($mentioned) {
             $mentions = mentions::resolve($conversation, $userid, $mentioned);
         }
-        $html = sender::build_html($text, $format, $mentions, $meta->attachsetid ? (int)$meta->attachsetid : null);
+        if ($format === (int)FORMAT_MOODLE && !$mentions && empty($meta->attachsetid)) {
+            // A message core sent: keep it in core's format, so its formatting still works.
+            $update = ['smallmessage' => $text, 'fullmessage' => $text, 'fullmessagehtml' => '',
+                'fullmessageformat' => FORMAT_MOODLE];
+        } else {
+            $html = sender::build_html(
+                $text,
+                $format === (int)FORMAT_MOODLE ? (int)FORMAT_PLAIN : $format,
+                $mentions,
+                $meta->attachsetid ? (int)$meta->attachsetid : null
+            );
+            $update = ['smallmessage' => $html, 'fullmessage' => html_to_text($html), 'fullmessagehtml' => $html,
+                'fullmessageformat' => FORMAT_HTML];
+        }
 
         $transaction = $DB->start_delegated_transaction();
         $DB->insert_record('local_messagingsupercharger_revision', (object)[
@@ -169,13 +180,7 @@ class editing {
             'timecreated' => $now,
         ]);
         $DB->update_record('local_messagingsupercharger_meta', (object)['id' => $meta->id, 'body' => $text, 'timeedited' => $now]);
-        $DB->update_record('messages', (object)[
-            'id' => $message->id,
-            'smallmessage' => $html,
-            'fullmessage' => html_to_text($html),
-            'fullmessagehtml' => $html,
-            'fullmessageformat' => FORMAT_HTML,
-        ]);
+        $DB->update_record('messages', (object)(['id' => $message->id] + $update));
         $transaction->allow_commit();
 
         // The plugin's own search reads the messages table, so it finds the new text at
@@ -191,8 +196,15 @@ class editing {
      * @throws \moodle_exception
      */
     public static function delete_for_all(int $messageid, int $userid): void {
+        global $DB;
         [$message] = self::require_own_message($messageid, $userid, 'deleteownmessageforall');
         api::delete_message_for_all_users((int)$message->id);
+        // Core's daily group digest reads queued messages without checking deletions, so a
+        // message deleted for everyone would still be emailed at the next digest.
+        $DB->delete_records('message_email_messages', ['messageid' => $message->id]);
+        // Deleted by its author: remove the attachments and plugin data too (people who
+        // join a group conversation later would otherwise still see the message's files).
+        cleanup::purge_message((int)$message->id);
     }
 
     /**
@@ -204,6 +216,7 @@ class editing {
      */
     public static function revisions(int $messageid, int $userid): array {
         global $DB;
+        conversations::require_messaging_enabled();
         conversations::require_visible_message($messageid, $userid);
         $rows = $DB->get_records('local_messagingsupercharger_revision', ['messageid' => $messageid], 'timecreated DESC, id DESC');
         $result = [];

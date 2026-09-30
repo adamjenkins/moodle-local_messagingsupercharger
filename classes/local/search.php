@@ -110,7 +110,7 @@ class search {
             return format_string((string)$row->name, true, ['context' => $context ?: \context_system::instance()]);
         }
         if ((int)$row->type === api::MESSAGE_CONVERSATION_TYPE_SELF) {
-            return get_string('personalspace', 'message');
+            return get_string('selfconversation', 'core_message');
         }
         $fields = \core_user\fields::for_name()->get_sql('u', false, '', '', false)->selects;
         $other = $DB->get_record_sql(
@@ -121,7 +121,7 @@ class search {
             [$row->conversationid, $userid],
             IGNORE_MULTIPLE
         );
-        return $other ? fullname($other) : get_string('deleteduser', 'core');
+        return $other ? fullname($other) : get_string('unknownuser', 'local_messagingsupercharger');
     }
 
     /**

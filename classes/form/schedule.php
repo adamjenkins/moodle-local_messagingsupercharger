@@ -39,6 +39,9 @@ class schedule extends \core_form\dynamic_form {
         }
         $mform->addElement('hidden', 'mentions');
         $mform->setType('mentions', PARAM_SEQUENCE);
+        // Names of the drawer's attached files, separated by "/" (which a file name cannot contain).
+        $mform->addElement('hidden', 'filenames');
+        $mform->setType('filenames', PARAM_RAW);
 
         $mform->addElement('textarea', 'message', get_string('message', 'core_message'), ['rows' => 5, 'cols' => 60]);
         $mform->setType('message', PARAM_RAW);
@@ -107,6 +110,13 @@ class schedule extends \core_form\dynamic_form {
             $id = (int)$data->id;
         } else {
             $mentions = $data->mentions === '' ? [] : array_map('intval', explode(',', $data->mentions));
+            $filenames = null;
+            if ((string)$data->filenames !== '') {
+                $filenames = array_values(array_filter(array_map(
+                    fn($name) => clean_param($name, PARAM_FILE),
+                    explode('/', $data->filenames)
+                )));
+            }
             $id = scheduler::schedule(
                 (int)$USER->id,
                 (int)$data->conversationid,
@@ -114,7 +124,8 @@ class schedule extends \core_form\dynamic_form {
                 FORMAT_PLAIN,
                 (int)$data->timesend,
                 (int)$data->draftitemid,
-                $mentions
+                $mentions,
+                $filenames
             );
         }
         return ['id' => $id];
@@ -132,6 +143,7 @@ class schedule extends \core_form\dynamic_form {
             'conversationid' => $conversationid,
             'draftitemid' => $this->optional_param('draftitemid', 0, PARAM_INT),
             'mentions' => $this->optional_param('mentions', '', PARAM_SEQUENCE),
+            'filenames' => $this->optional_param('filenames', '', PARAM_RAW),
             'message' => $this->optional_param('text', '', PARAM_RAW),
             'timesend' => time() + HOURSECS,
         ];

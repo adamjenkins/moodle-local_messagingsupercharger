@@ -51,8 +51,11 @@ try {
     $conversation = conversations::get($conversationid);
     conversations::require_can_send((int)$USER->id, (int)$conversation->id);
     conversations::require_capability('sendattachments', $conversation, (int)$USER->id);
+    // The browser picks the draft item id (see amd/src/composer.js), so that uploads can
+    // start inside the drop or paste event. Draft areas belong to the uploader's own user
+    // context, so any id only ever reaches the uploader's own files.
     if ($draftitemid <= 0) {
-        throw new invalid_parameter_exception('draftitemid');
+        $draftitemid = file_get_unused_draft_itemid();
     }
     if (
         empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'] ?? '')
@@ -90,6 +93,7 @@ try {
     $url = moodle_url::make_draftfile_url($draftitemid, '/', $filename);
     $response = [
         'success' => true,
+        'draftitemid' => $draftitemid,
         'filename' => $filename,
         'filesize' => (int)$file->get_filesize(),
         'filesizetext' => display_size($file->get_filesize()),
@@ -98,6 +102,9 @@ try {
         'thumburl' => $isimage ? (new moodle_url($url, ['preview' => 'thumb']))->out(false) : '',
     ];
 } catch (Throwable $e) {
+    if (!$e instanceof moodle_exception) {
+        debugging('local_messagingsupercharger upload: ' . get_class($e) . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+    }
     $response = ['success' => false, 'error' => $e instanceof moodle_exception ? $e->getMessage()
         : get_string('uploadfailed', 'local_messagingsupercharger')];
 }

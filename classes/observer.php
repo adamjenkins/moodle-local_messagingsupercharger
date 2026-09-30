@@ -28,10 +28,15 @@ use local_messagingsupercharger\local\conversations;
  */
 class observer {
     /**
-     * A message was deleted for one user. Core records deletion per member (even
-     * "delete for everyone" is one DELETED row per member), so plugin data is removed
-     * only once every member has deleted the message. Until then the other members
-     * still see it, attachments included.
+     * A message was deleted for one user. Core records deletion per member (even "delete
+     * for everyone" is one DELETED row per member).
+     *
+     * - Once every current member has deleted it, it is dropped from core's pending group
+     *   digest, which does not check deletions itself.
+     * - Plugin data is removed then only for individual and self conversations. A group
+     *   conversation can gain members, and core shows its older messages to them, so its
+     *   data stays until the message itself is removed (the sweep) or its author deletes it
+     *   for everyone through the plugin (editing::delete_for_all() purges it).
      *
      * @param \core\event\message_deleted $event
      */
@@ -42,22 +47,29 @@ class observer {
         if (!$messageid) {
             return;
         }
-        $conversationid = $DB->get_field('messages', 'conversationid', ['id' => $messageid]);
-        if (!$conversationid) {
+        $message = $DB->get_record('messages', ['id' => $messageid], 'id, conversationid');
+        if (!$message) {
             cleanup::purge_message($messageid);
             return;
         }
-        if (conversations::is_deleted_for_all($messageid, (int)$conversationid)) {
+        if (!conversations::is_deleted_for_all($messageid, (int)$message->conversationid)) {
+            return;
+        }
+        $DB->delete_records('message_email_messages', ['messageid' => $messageid]);
+        $type = (int)$DB->get_field('message_conversations', 'type', ['id' => $message->conversationid]);
+        if ($type !== \core_message\api::MESSAGE_CONVERSATION_TYPE_GROUP) {
             cleanup::purge_message($messageid);
         }
     }
 
     /**
-     * A group or course was deleted: core has already removed its conversations.
+     * A group or course was deleted: core has already removed its conversations. Rather
+     * than sweep the whole site once per group (a course with many groups fires this many
+     * times), queue a single background sweep.
      *
      * @param \core\event\base $event
      */
     public static function sweep(\core\event\base $event): void {
-        cleanup::sweep();
+        \core\task\manager::queue_adhoc_task(new \local_messagingsupercharger\task\sweep_orphans(), true);
     }
 }

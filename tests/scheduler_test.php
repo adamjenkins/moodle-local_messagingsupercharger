@@ -207,14 +207,66 @@ final class scheduler_test extends \advanced_testcase {
         }
     }
 
-    public function test_conversation_deleted_removes_scheduled(): void {
+    public function test_conversation_deleted_marks_scheduled_failed(): void {
         global $DB;
         $carol = $this->getDataGenerator()->create_user();
         $group = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
             ->create_group_conversation([$this->alice, $carol]);
         $id = scheduler::schedule((int)$this->alice->id, (int)$group->id, 'Soon', FORMAT_PLAIN, time() + HOURSECS);
         groups_delete_group($group->groupid);
-        // The group_deleted observer sweeps orphans.
-        $this->assertFalse($DB->record_exists('local_messagingsupercharger_sched', ['id' => $id]));
+        $this->runAdhocTasks(task\sweep_orphans::class);
+        // Kept, marked failed, so the author can see what happened.
+        $row = $DB->get_record('local_messagingsupercharger_sched', ['id' => $id], '*', MUST_EXIST);
+        $this->assertEquals(scheduler::STATUS_FAILED, $row->status);
+        $this->assertSame('failednoconversation', $row->failreason);
+        $this->assertSame(
+            get_string('failednoconversation', 'local_messagingsupercharger'),
+            scheduler::list((int)$this->alice->id)[0]['failreason']
+        );
+    }
+
+    public function test_claimed_scheduled_message_is_not_sent_again(): void {
+        global $DB;
+        $this->redirectMessages();
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'Once',
+            FORMAT_PLAIN,
+            time() + HOURSECS
+        );
+        $timesend = time() - 1;
+        $DB->set_field('local_messagingsupercharger_sched', 'timesend', $timesend, ['id' => $id]);
+        // Another runner has claimed it.
+        $DB->set_field('local_messagingsupercharger_sched', 'status', scheduler::STATUS_SENDING, ['id' => $id]);
+        $this->assertNull(scheduler::deliver($id, $timesend));
+        $this->assertSame(0, $DB->count_records('messages', ['conversationid' => $this->conversation->id]));
+        // And it cannot be edited while being sent.
+        $this->expectExceptionMessage(get_string('schedulebeingsent', 'local_messagingsupercharger'));
+        scheduler::update($id, (int)$this->alice->id, 'Changed', time() + HOURSECS);
+    }
+
+    public function test_scheduled_attaches_only_named_files(): void {
+        global $DB;
+        $generator = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger');
+        $draftitemid = file_get_unused_draft_itemid();
+        $generator->create_draft_file($this->alice, $draftitemid, 'chosen.txt');
+        $generator->create_draft_file($this->alice, $draftitemid, 'other.txt');
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'Later',
+            FORMAT_PLAIN,
+            time() + HOURSECS,
+            $draftitemid,
+            [],
+            ['chosen.txt']
+        );
+        $setid = (int)$DB->get_field('local_messagingsupercharger_sched', 'attachsetid', ['id' => $id]);
+        $this->assertSame(['chosen.txt'], array_map(fn($f) => $f->get_filename(), local\attachments::set_files($setid)));
+        $this->assertSame(['other.txt'], array_map(
+            fn($f) => $f->get_filename(),
+            local\attachments::draft_files((int)$this->alice->id, $draftitemid)
+        ));
     }
 }

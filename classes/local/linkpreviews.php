@@ -79,7 +79,8 @@ class linkpreviews {
      */
     public static function queue_for_html(string $html): void {
         global $DB;
-        foreach (self::extract_urls($html) as $url) {
+        // Only links that survive core's HTML cleaning, i.e. that readers can actually see.
+        foreach (self::extract_urls(purify_html($html)) as $url) {
             if (!self::is_allowed_url($url)) {
                 continue;
             }
@@ -424,6 +425,37 @@ class linkpreviews {
     }
 
     /**
+     * May a user see a preview's image? Only if they can see a message that links to its
+     * URL: a member of the conversation who has not deleted the message.
+     *
+     * @param int $previewid
+     * @param int $userid
+     * @return bool
+     */
+    public static function can_view_preview(int $previewid, int $userid): bool {
+        global $DB;
+        $url = $DB->get_field('local_messagingsupercharger_preview', 'url', ['id' => $previewid]);
+        if ($url === false || $userid <= 0) {
+            return false;
+        }
+        // The URL appears in the message HTML with & written as &amp;.
+        $needle = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5, 'UTF-8', false);
+        $like = $DB->sql_like('m.smallmessage', ':url', true, true);
+        $sql = "SELECT 1
+                  FROM {messages} m
+                  JOIN {message_conversation_members} mcm ON mcm.conversationid = m.conversationid AND mcm.userid = :userid
+             LEFT JOIN {message_user_actions} mua
+                    ON mua.messageid = m.id AND mua.userid = :userid2 AND mua.action = :deleted
+                 WHERE mua.id IS NULL AND $like";
+        return $DB->record_exists_sql($sql, [
+            'userid' => $userid,
+            'userid2' => $userid,
+            'deleted' => \core_message\api::MESSAGE_ACTION_DELETED,
+            'url' => '%' . $DB->sql_like_escape($needle) . '%',
+        ]);
+    }
+
+    /**
      * Previews for the links in a set of messages, for display.
      *
      * @param array $messages messageid => message HTML
@@ -448,28 +480,27 @@ class linkpreviews {
         $rows = $DB->get_records_select('local_messagingsupercharger_preview', "urlhash $insql AND status = :status", $params);
         $result = [];
         $syscontextid = \context_system::instance()->id;
+        // All the preview images in one query.
+        $filenames = [];
+        $withimage = array_keys(array_filter($rows, fn($row) => !empty($row->hasimage)));
+        if ($withimage) {
+            [$fsql, $fparams] = $DB->get_in_or_equal($withimage, SQL_PARAMS_NAMED);
+            $fparams += ['contextid' => $syscontextid, 'component' => features::COMPONENT,
+                'filearea' => attachments::AREA_PREVIEW];
+            $filenames = $DB->get_records_select_menu('files', "contextid = :contextid AND component = :component
+                AND filearea = :filearea AND itemid $fsql AND filename <> '.'", $fparams, '', 'itemid, filename');
+        }
         foreach ($rows as $row) {
             $imageurl = '';
-            if ($row->hasimage) {
-                $files = get_file_storage()->get_area_files(
+            if (isset($filenames[$row->id])) {
+                $imageurl = \moodle_url::make_pluginfile_url(
                     $syscontextid,
                     features::COMPONENT,
                     attachments::AREA_PREVIEW,
                     $row->id,
-                    'id',
-                    false
-                );
-                if ($files) {
-                    $file = reset($files);
-                    $imageurl = \moodle_url::make_pluginfile_url(
-                        $syscontextid,
-                        features::COMPONENT,
-                        attachments::AREA_PREVIEW,
-                        $row->id,
-                        '/',
-                        $file->get_filename()
-                    )->out(false);
-                }
+                    '/',
+                    $filenames[$row->id]
+                )->out(false);
             }
             foreach ($byhash[$row->urlhash] as $messageid) {
                 $result[$messageid][] = [

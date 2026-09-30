@@ -50,6 +50,8 @@ export default class Composer {
         this.live = null;
         this.fileInput = null;
         this.dragDepth = 0;
+        this.draftitemid = 0;
+        this.lastRegistered = 0;
         this.listen();
     }
 
@@ -145,22 +147,40 @@ export default class Composer {
      */
     canAttach() {
         const p = this.permissions || {};
-        return !!(this.controller.conversationId && enabled('attachments') && p.cansend && p.cansendattachments
-            && config().draftitemid);
+        return !!(this.controller.conversationId && enabled('attachments') && p.cansend && p.cansendattachments);
     }
 
     /**
      * Forget pending files and extras (the conversation changed).
      */
     reset() {
-        this.pending.forEach((item) => {
-            if (item.status === 'done') {
-                Repository.deleteDraftFile(config().draftitemid, item.serverName).catch(() => null);
-            }
-        });
+        this.dropPending(this.pending, true);
         this.pending = [];
         this.renderPending();
         Interceptor.reset();
+    }
+
+    /**
+     * Let go of pending items: stop their uploads, free their thumbnails and, if asked,
+     * delete the files already uploaded.
+     *
+     * @param {Object[]} items
+     * @param {Boolean} deleteUploaded
+     */
+    dropPending(items, deleteUploaded) {
+        items.forEach((item) => {
+            item.dropped = true;
+            if (item.status === 'uploading' && item.xhr) {
+                item.xhr.abort();
+            }
+            if (deleteUploaded && item.status === 'done') {
+                Repository.deleteDraftFile(this.draftitemid, item.serverName).catch(() => null);
+            }
+            if (item.thumb) {
+                URL.revokeObjectURL(item.thumb);
+                item.thumb = '';
+            }
+        });
     }
 
     /**
@@ -212,13 +232,22 @@ export default class Composer {
             this.addFiles(files.map((file) => this.renamePasted(file)));
         });
 
-        // Capture phase, so this runs before core's own send handlers.
+        // Capture phase, so this runs before core's own send handlers. Core sends on a click
+        // of the button, on Enter/Space on the focused button (custom_interaction_events
+        // "activate", which then prevents the click), and on Enter in the text box.
         root.addEventListener('click', (e) => {
             if (e.target.closest && e.target.closest(Selectors.SEND_BUTTON) && this.root.contains(e.target)) {
                 this.beforeSend(e);
             }
         }, true);
         root.addEventListener('keydown', (e) => {
+            const modified = e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing;
+            if (e.target.closest && e.target.closest(Selectors.SEND_BUTTON)) {
+                if ((e.key === 'Enter' || e.key === ' ') && !modified) {
+                    this.beforeSend(e);
+                }
+                return;
+            }
             if (!e.target.matches || !e.target.matches(Selectors.TEXTAREA)) {
                 return;
             }
@@ -229,7 +258,8 @@ export default class Composer {
             // Same test as core (message_drawer_view_conversation.js): the preference is stored as '1'.
             const setting = footer ? footer.getAttribute('data-enter-to-send') : null;
             const entertosend = !!setting && setting !== 'false' && setting !== '0';
-            if (e.key === 'Enter' && !e.shiftKey && entertosend) {
+            // Core ignores Enter with any modifier (custom_interaction_events), so must we.
+            if (e.key === 'Enter' && !modified && entertosend) {
                 this.beforeSend(e);
             }
         }, true);
@@ -305,26 +335,60 @@ export default class Composer {
                 item.thumb = URL.createObjectURL(file);
             }
             this.announce(str('uploading') + ' ' + file.name);
-            const pendingPromise = new Pending('local_messagingsupercharger/composer:upload');
-            Repository.uploadFile(file, this.controller.conversationId, cfg.draftitemid, (fraction) => {
-                item.progress = fraction;
-                this.updateProgress(item);
-            }).then((response) => {
-                item.status = 'done';
-                item.serverName = response.filename;
-                item.name = response.filename;
-                item.sizetext = response.filesizetext;
-                this.renderPending();
-                this.announce(response.filename);
-                return response;
-            }).catch((error) => {
-                item.status = 'error';
-                item.error = error.message;
-                this.renderPending();
-                this.announce(error.message);
-            }).then(() => pendingPromise.resolve()).catch(() => pendingPromise.resolve());
+            this.upload(item);
         });
         this.renderPending();
+    }
+
+    /**
+     * This page's draft area for attachments, chosen here on first use. A draft area lives
+     * in the uploader's own user context, so the id only has to be unused by this user;
+     * choosing it in the browser lets every upload start at once, inside the drop or paste
+     * event (a dropped or pasted file may not be readable after the event has ended).
+     *
+     * @returns {Number}
+     */
+    getDraftItemId() {
+        if (!this.draftitemid) {
+            this.draftitemid = 100000000 + Math.floor(Math.random() * 1900000000);
+        }
+        return this.draftitemid;
+    }
+
+    /**
+     * Upload one item, starting now.
+     *
+     * @param {Object} item
+     */
+    upload(item) {
+        const pendingPromise = new Pending('local_messagingsupercharger/composer:upload');
+        const draftitemid = this.getDraftItemId();
+        Repository.uploadFile(item.file, this.controller.conversationId, draftitemid, (fraction) => {
+            item.progress = fraction;
+            this.updateProgress(item);
+        }, (xhr) => {
+            item.xhr = xhr;
+        }).then((response) => {
+            if (item.dropped) {
+                // Removed while it was uploading: it must not go out with a later message.
+                return Repository.deleteDraftFile(draftitemid, response.filename);
+            }
+            item.status = 'done';
+            item.serverName = response.filename;
+            item.name = response.filename;
+            item.sizetext = response.filesizetext;
+            this.renderPending();
+            this.announce(response.filename);
+            return response;
+        }).catch((error) => {
+            if (item.dropped) {
+                return;
+            }
+            item.status = 'error';
+            item.error = error.message;
+            this.renderPending();
+            this.announce(error.message);
+        }).then(() => pendingPromise.resolve()).catch(() => pendingPromise.resolve());
     }
 
     /**
@@ -391,12 +455,7 @@ export default class Composer {
      */
     removeItem(item) {
         this.pending = this.pending.filter((other) => other !== item);
-        if (item.status === 'done') {
-            Repository.deleteDraftFile(config().draftitemid, item.serverName).catch(Notification.exception);
-        }
-        if (item.thumb) {
-            URL.revokeObjectURL(item.thumb);
-        }
+        this.dropPending([item], true);
         this.renderPending();
         const {textarea} = this.parts();
         if (textarea) {
@@ -412,6 +471,10 @@ export default class Composer {
     beforeSend(e) {
         if (this.skipNextSend) {
             this.skipNextSend = false;
+            return;
+        }
+        // One send can reach us as both a key press and a click.
+        if (Date.now() - this.lastRegistered < 300) {
             return;
         }
         const {textarea} = this.parts();
@@ -441,18 +504,22 @@ export default class Composer {
         Interceptor.register(text, {
             text: payloadtext,
             format: FORMAT_PLAIN,
-            draftitemid: attached.length ? config().draftitemid : 0,
+            draftitemid: attached.length ? this.draftitemid : 0,
+            filenames: attached.map((item) => item.serverName),
             mentions,
         });
-        this.clearAfterSend();
+        this.lastRegistered = Date.now();
+        this.clearAfterSend(attached);
     }
 
     /**
-     * The files have gone with the message: clear the list (without deleting them).
+     * The files have gone with the message: take them off the list (without deleting them).
+     *
+     * @param {Object[]} sent
      */
-    clearAfterSend() {
-        this.pending.forEach((item) => item.thumb && URL.revokeObjectURL(item.thumb));
-        this.pending = this.pending.filter((item) => item.status === 'uploading');
+    clearAfterSend(sent) {
+        this.dropPending(sent, false);
+        this.pending = this.pending.filter((item) => !sent.includes(item) && item.status !== 'error');
         this.renderPending();
         this.controller.mentions.reset();
         this.controller.requestExtrasSoon(1500);
@@ -469,7 +536,7 @@ export default class Composer {
         }
         const form = new ModalForm({
             formClass: 'local_messagingsupercharger\\form\\compose',
-            args: {conversationid, text: textarea.value, draftitemid: this.canAttach() ? config().draftitemid : 0},
+            args: {conversationid, text: textarea.value, draftitemid: this.canAttach() ? this.draftitemid : 0},
             modalConfig: {title: str('richeditor'), large: true},
             saveButtonText: str('send'),
             returnFocus: textarea,
@@ -488,7 +555,10 @@ export default class Composer {
                 editordraftitemid: data.editordraftitemid || 0,
                 mentions: [],
             });
-            this.pending = [];
+            // The dialogue's file manager showed, and sends, everything uploaded so far.
+            const uploaded = this.pending.filter((item) => item.status === 'done');
+            this.dropPending(uploaded, false);
+            this.pending = this.pending.filter((item) => !uploaded.includes(item));
             this.renderPending();
             this.skipNextSend = true;
             send.click();
@@ -513,7 +583,8 @@ export default class Composer {
             args: {
                 conversationid,
                 text,
-                draftitemid: attached.length ? config().draftitemid : 0,
+                draftitemid: attached.length ? this.draftitemid : 0,
+                filenames: attached.map((item) => item.serverName).join('/'),
                 mentions: this.controller.mentions.pickedIdsIn(text).join(','),
             },
             modalConfig: {title: str('schedulesend')},
@@ -521,7 +592,8 @@ export default class Composer {
         });
         form.addEventListener(form.events.FORM_SUBMITTED, () => {
             textarea.value = '';
-            this.pending = this.pending.filter((item) => item.status === 'uploading');
+            this.dropPending(attached, false);
+            this.pending = this.pending.filter((item) => !attached.includes(item));
             this.renderPending();
             this.controller.mentions.reset();
             addToast(str('schedulesaved'));

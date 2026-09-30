@@ -193,7 +193,7 @@ class extras {
              LEFT JOIN {user_preferences} up ON up.userid = u.id AND up.name = :pref
                  WHERE mua.messageid = :messageid AND mua.action = :action
                    AND mua.userid <> :authorid
-                   AND (up.id IS NULL OR up.value <> '0')
+                   AND (up.id IS NULL OR " . $DB->sql_compare_text('up.value', 1) . " <> :off)
               ORDER BY mua.timecreated, u.id";
         $rows = $DB->get_records_sql($sql, [
             'conversationid' => $conversation->id,
@@ -201,6 +201,7 @@ class extras {
             'messageid' => $newest->id,
             'action' => api::MESSAGE_ACTION_READ,
             'authorid' => $newest->useridfrom,
+            'off' => '0',
         ]);
         $list = [];
         foreach ($rows as $row) {

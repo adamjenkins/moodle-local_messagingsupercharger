@@ -31,9 +31,9 @@
 import $ from 'jquery';
 import CustomEvents from 'core/custom_interaction_events';
 import ModalEvents from 'core/modal_events';
+import Selectors from 'local_messagingsupercharger/selectors';
 
-/** The drawer container (core/drawer.mustache). */
-const DRAWER = '[data-region="right-hand-drawer"]';
+const DRAWER = Selectors.DRAWER_CONTAINER;
 
 let open = 0;
 let installed = false;

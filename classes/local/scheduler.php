@@ -35,6 +35,8 @@ class scheduler {
     const STATUS_PENDING = 0;
     /** @var int Could not be sent. */
     const STATUS_FAILED = 1;
+    /** @var int Claimed by a runner that is sending it right now. */
+    const STATUS_SENDING = 2;
 
     /** @var int Furthest ahead a message may be scheduled. */
     const MAX_AHEAD = 365 * DAYSECS;
@@ -67,6 +69,7 @@ class scheduler {
      * @param int $timesend
      * @param int $draftitemid Attachments (0 for none)
      * @param int[] $mentionids
+     * @param string[]|null $filenames Attach only these files from the draft area (null for all)
      * @return int Scheduled message id
      * @throws \moodle_exception
      */
@@ -77,7 +80,8 @@ class scheduler {
         int $format,
         int $timesend,
         int $draftitemid = 0,
-        array $mentionids = []
+        array $mentionids = [],
+        ?array $filenames = null
     ): int {
         global $DB;
         features::require_enabled(features::SCHEDULING);
@@ -89,7 +93,7 @@ class scheduler {
             throw new \moodle_exception('toomanyscheduled', features::COMPONENT, '', self::MAX_PENDING);
         }
         $mentions = mentions::resolve($conversation, $userid, $mentionids);
-        $hasattachments = (bool)attachments::draft_files($userid, $draftitemid);
+        $hasattachments = (bool)attachments::draft_files($userid, $draftitemid, $filenames);
         sender::check($userid, $conversation, $text, $format, $hasattachments, array_keys($mentions));
 
         $now = time();
@@ -107,7 +111,7 @@ class scheduler {
             'timemodified' => $now,
         ]);
         if ($hasattachments) {
-            [$setid] = attachments::create_set($userid, $conversationid, $draftitemid, 0, '');
+            [$setid] = attachments::create_set($userid, $conversationid, $draftitemid, 0, '', $filenames);
             if ($setid) {
                 $DB->set_field('local_messagingsupercharger_attach', 'scheduledid', $id, ['id' => $setid]);
                 $DB->set_field('local_messagingsupercharger_sched', 'attachsetid', $setid, ['id' => $id]);
@@ -160,6 +164,9 @@ class scheduler {
         global $DB;
         features::require_enabled(features::SCHEDULING);
         $row = self::require_own($id, $userid);
+        if ((int)$row->status === self::STATUS_SENDING) {
+            throw new \moodle_exception('schedulebeingsent', features::COMPONENT);
+        }
         $conversation = conversations::get((int)$row->conversationid);
         conversations::require_capability('schedulesend', $conversation, $userid);
         self::validate_time($timesend);
@@ -220,7 +227,8 @@ class scheduler {
                 'format' => (int)$row->bodyformat,
                 'timesend' => (int)$row->timesend,
                 'failed' => (int)$row->status === self::STATUS_FAILED,
-                'failreason' => $row->failreason ? get_string($row->failreason, features::COMPONENT) : '',
+                'failreason' => (int)$row->status === self::STATUS_FAILED && $row->failreason
+                    ? get_string($row->failreason, features::COMPONENT) : '',
                 'attachments' => $row->attachsetid ? count(attachments::set_files((int)$row->attachsetid)) : 0,
             ];
         }
@@ -244,6 +252,21 @@ class scheduler {
         ) {
             return null;
         }
+        // Claim the row atomically: the task and the hourly catch-up may both try to send it.
+        // One UPDATE both changes the status and stamps our token, and only one runner's
+        // UPDATE can match a pending row, so reading our token back proves the claim.
+        $token = 'claim:' . random_string(20);
+        $DB->execute("UPDATE {local_messagingsupercharger_sched}
+                         SET status = :sending, failreason = :token
+                       WHERE id = :id AND status = :pending", [
+            'sending' => self::STATUS_SENDING,
+            'token' => $token,
+            'id' => $row->id,
+            'pending' => self::STATUS_PENDING,
+        ]);
+        if ($DB->get_field('local_messagingsupercharger_sched', 'failreason', ['id' => $row->id]) !== $token) {
+            return null;
+        }
         $reason = self::delivery_failure((int)$row->userid, (int)$row->conversationid);
         if ($reason === null) {
             try {
@@ -259,7 +282,8 @@ class scheduler {
                 );
                 $DB->delete_records('local_messagingsupercharger_sched', ['id' => $row->id]);
                 return (int)$message->id;
-            } catch (\moodle_exception $e) {
+            } catch (\Throwable $e) {
+                // Nothing was sent: sender::send() only throws before sending.
                 $reason = 'failedcannotsend';
             }
         }

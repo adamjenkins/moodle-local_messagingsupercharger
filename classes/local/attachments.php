@@ -37,20 +37,28 @@ class attachments {
     /** @var string File area for link preview images. */
     const AREA_PREVIEW = 'preview';
 
+    /** @var int Core's HTML cleaning clamps image width and height attributes to this. */
+    const MAX_IMAGE_ATTRIBUTE = 1200;
+
     /**
-     * The files currently in a user's draft area.
+     * The files currently in a user's draft area, optionally only those named.
      *
      * @param int $userid
      * @param int $draftitemid
+     * @param string[]|null $filenames Only these files (null for all)
      * @return \stored_file[]
      */
-    public static function draft_files(int $userid, int $draftitemid): array {
+    public static function draft_files(int $userid, int $draftitemid, ?array $filenames = null): array {
         if ($draftitemid <= 0) {
             return [];
         }
         $fs = get_file_storage();
         $usercontext = \context_user::instance($userid);
-        return array_values($fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'id', false));
+        $files = array_values($fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'id', false));
+        if ($filenames !== null) {
+            $files = array_values(array_filter($files, fn($file) => in_array($file->get_filename(), $filenames, true)));
+        }
+        return $files;
     }
 
     /**
@@ -102,6 +110,9 @@ class attachments {
      * @param int $draftitemid Draft area holding attachments (0 for none)
      * @param int $editordraftitemid Draft area holding images embedded in rich text (0 for none)
      * @param string $html Rich text whose draftfile URLs should be rewritten
+     * @param string[]|null $filenames Attach only these files from the draft area (null for all). The
+     *        drawer names the files it shows, so that an upload abandoned or still in progress in the
+     *        same draft area never goes out with this message.
      * @return array [set id or null, rewritten html]
      */
     public static function create_set(
@@ -109,10 +120,11 @@ class attachments {
         int $conversationid,
         int $draftitemid,
         int $editordraftitemid,
-        string $html
+        string $html,
+        ?array $filenames = null
     ): array {
         global $DB;
-        $attached = self::draft_files($userid, $draftitemid);
+        $attached = self::draft_files($userid, $draftitemid, $filenames);
         $inline = self::draft_files($userid, $editordraftitemid);
         if (!$attached && !$inline) {
             return [null, $html];
@@ -145,7 +157,13 @@ class attachments {
                     'userid' => $userid,
                 ], $file);
             }
-            self::clear_draft($userid, $draftitemid);
+            if ($filenames === null) {
+                self::clear_draft($userid, $draftitemid);
+            } else {
+                foreach ($attached as $file) {
+                    $file->delete();
+                }
+            }
         }
         if ($inline) {
             global $USER;
@@ -260,8 +278,10 @@ class attachments {
                 $attributes = ['src' => $url->out(false), 'alt' => $name, 'class' => 'msgsc-attachment-thumb'];
                 $info = $file->get_imageinfo();
                 if ($info && !empty($info['width']) && !empty($info['height'])) {
-                    $attributes['width'] = (int)$info['width'];
-                    $attributes['height'] = (int)$info['height'];
+                    [$attributes['width'], $attributes['height']] = self::fit_dimensions(
+                        (int)$info['width'],
+                        (int)$info['height']
+                    );
                 }
                 $content = \html_writer::empty_tag('img', $attributes);
                 $items[] = \html_writer::link($url, $content, ['class' => 'msgsc-attachment msgsc-attachment-image',
@@ -276,6 +296,20 @@ class attachments {
             }
         }
         return \html_writer::div(implode(' ', $items), 'msgsc-attachments');
+    }
+
+    /**
+     * Scale image dimensions to fit within the attribute limit of core's HTML cleaning,
+     * keeping the aspect ratio (the cleaning would clamp each one separately and distort
+     * it). The page shows the image at up to its real size regardless.
+     *
+     * @param int $width
+     * @param int $height
+     * @return int[] [width, height]
+     */
+    public static function fit_dimensions(int $width, int $height): array {
+        $scale = min(1, self::MAX_IMAGE_ATTRIBUTE / max($width, $height));
+        return [max(1, (int)round($width * $scale)), max(1, (int)round($height * $scale))];
     }
 
     /**

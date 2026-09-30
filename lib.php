@@ -55,7 +55,7 @@ function local_messagingsupercharger_pluginfile(
     $forcedownload,
     array $options = []
 ) {
-    global $USER;
+    global $CFG, $USER;
 
     if ($context->contextlevel != CONTEXT_SYSTEM) {
         return false;
@@ -65,12 +65,17 @@ function local_messagingsupercharger_pluginfile(
         return false;
     }
     require_login(null, false);
-    if (isguestuser()) {
+    if (isguestuser() || empty($CFG->messaging)) {
+        // With site messaging off, messages are unavailable, and so are their files.
         return false;
     }
 
     $itemid = (int)array_shift($args);
-    if ($filearea !== attachments::AREA_PREVIEW && !attachments::can_access_set($itemid, (int)$USER->id)) {
+    if ($filearea === attachments::AREA_PREVIEW) {
+        if (!\local_messagingsupercharger\local\linkpreviews::can_view_preview($itemid, (int)$USER->id)) {
+            return false;
+        }
+    } else if (!attachments::can_access_set($itemid, (int)$USER->id)) {
         return false;
     }
 
