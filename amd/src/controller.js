@@ -238,6 +238,7 @@ export default class Controller {
                 this.extras = extras;
                 this.since = extras.servertime;
                 this.composer.applyPermissions(extras.permissions);
+                this.mentions.recheck();
                 this.decorations.apply(extras);
                 this.strip.render(extras);
                 return extras;

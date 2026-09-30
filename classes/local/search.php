@@ -133,11 +133,7 @@ class search {
      */
     protected static function plain_text(\stdClass $row): string {
         $text = (string)$row->smallmessage;
-        if (sender::is_html($row->fullmessageformat)) {
-            $text = preg_replace('~<(br|/p|/div|/li)\b[^>]*>~i', ' ', $text);
-            $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        }
-        return $text;
+        return sender::is_html($row->fullmessageformat) ? sender::html_to_plain($text) : $text;
     }
 
     /**

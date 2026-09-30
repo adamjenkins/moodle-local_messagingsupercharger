@@ -158,7 +158,7 @@ class compose extends \core_form\dynamic_form {
             'format' => FORMAT_HTML,
             'editordraftitemid' => (int)($data->message['itemid'] ?? 0),
             'draftitemid' => (int)($data->attachments ?? 0),
-            'preview' => shorten_text(trim(html_to_text((string)$data->message['text'], 0, false)), 200),
+            'preview' => shorten_text(sender::html_to_plain((string)$data->message['text']), 200),
         ];
     }
 

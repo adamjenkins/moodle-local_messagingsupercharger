@@ -105,7 +105,7 @@ class mentions {
         global $DB;
         $now = time();
         $author = \core_user::get_user($authorid);
-        $plain = sender::is_html($format) ? html_to_text($text, 0, false) : $text;
+        $plain = sender::is_html($format) ? sender::html_to_plain($text) : $text;
         $snippet = shorten_text(trim($plain), 200);
         $url = new \moodle_url('/message/index.php', ['convid' => $conversation->id]);
         $conversationname = format_string(

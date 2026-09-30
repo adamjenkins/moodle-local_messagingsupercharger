@@ -186,6 +186,19 @@ class sender {
     }
 
     /**
+     * Message HTML as plain text, keeping the words as written (core's html_to_text()
+     * upper-cases bold text, which suits email but not a preview or an excerpt).
+     *
+     * @param string $html
+     * @return string
+     */
+    public static function html_to_plain(string $html): string {
+        $text = preg_replace('~<(br|/p|/div|/li|/h[1-6])\b[^>]*>~i', ' ', $html);
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return trim(preg_replace('~\s+~u', ' ', $text));
+    }
+
+    /**
      * The message text as the drawer displays it, formatted by core.
      *
      * @param \stdClass $message A messages record

@@ -117,6 +117,17 @@ export default class Mentions {
     }
 
     /**
+     * Look at the text box again (the conversation's permissions have just arrived, and
+     * the person may already have typed "@" and some letters).
+     */
+    recheck() {
+        const textarea = this.textarea();
+        if (textarea && document.activeElement === textarea) {
+            this.onInput(textarea);
+        }
+    }
+
+    /**
      * Fetch matching members.
      *
      * @param {String} query

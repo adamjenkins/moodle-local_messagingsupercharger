@@ -94,7 +94,7 @@ class pins {
         }
         $authorfields = \core_user\fields::for_name()->get_sql('a', false, 'author_', '', false)->selects;
         $pinnerfields = \core_user\fields::for_name()->get_sql('p', false, 'pinner_', '', false)->selects;
-        $sql = "SELECT pin.id, pin.messageid, pin.timecreated AS timepinned, m.fullmessage, m.timecreated,
+        $sql = "SELECT pin.id, pin.messageid, pin.timecreated AS timepinned, m.smallmessage, m.fullmessageformat, m.timecreated,
                        $authorfields, $pinnerfields
                   FROM {local_messagingsupercharger_pin} pin
                   JOIN {messages} m ON m.id = pin.messageid
@@ -115,7 +115,8 @@ class pins {
             $pinner = username_load_fields_from_object(new \stdClass(), $row, 'pinner_');
             $result[] = [
                 'messageid' => (int)$row->messageid,
-                'text' => shorten_text(trim(html_to_text((string)$row->fullmessage, 0, false)), 120),
+                'text' => shorten_text(sender::is_html($row->fullmessageformat)
+                    ? sender::html_to_plain((string)$row->smallmessage) : trim((string)$row->smallmessage), 120),
                 'author' => fullname($author),
                 'timecreated' => (int)$row->timecreated,
                 'pinnedby' => !empty($pinner->firstname) || !empty($pinner->lastname) ? fullname($pinner) : '',
