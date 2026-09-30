@@ -44,6 +44,10 @@ final class emailhold_test extends \advanced_testcase {
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
+        // On PostgreSQL each test runs inside a transaction, and core holds message processors
+        // back until it commits (core\message\manager::send_message), so the email hold would
+        // never run. Resetting without rollback lets them run as on a live site.
+        $this->preventResetByRollback();
         set_config('emaildelay', 120, 'local_messagingsupercharger');
         $this->sender = $this->getDataGenerator()->create_user(['firstname' => 'Sam', 'lastname' => 'Sender']);
         $this->recipient = $this->getDataGenerator()->create_user(['firstname' => 'Rita', 'lastname' => 'Recipient']);

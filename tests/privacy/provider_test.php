@@ -51,6 +51,10 @@ final class provider_test extends provider_testcase {
         parent::setUp();
         require_once($CFG->dirroot . '/message/lib.php');
         $this->resetAfterTest();
+        // On PostgreSQL each test runs inside a transaction, and core holds message processors
+        // back until it commits (core\message\manager::send_message), so the email hold would
+        // never run. Resetting without rollback lets them run as on a live site.
+        $this->preventResetByRollback();
         set_config('emaildelay', 120, 'local_messagingsupercharger');
         $generator = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger');
         $this->ann = $this->getDataGenerator()->create_user(['firstname' => 'Ann', 'lastname' => 'X']);
