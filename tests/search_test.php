@@ -20,14 +20,15 @@ use core_message\api;
 use local_messagingsupercharger\local\search;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\search::class)]
 /**
  * Tests for message search.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\search
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\search::class)]
 final class search_test extends \advanced_testcase {
     public function test_search_scope(): void {
         global $CFG;

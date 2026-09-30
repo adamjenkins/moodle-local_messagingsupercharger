@@ -16,14 +16,15 @@
 
 namespace local_messagingsupercharger;
 
+#[\PHPUnit\Framework\Attributes\CoversNothing]
 /**
  * Tests that the admin settings page renders.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @coversNothing
  */
-#[\PHPUnit\Framework\Attributes\CoversNothing]
 final class settings_test extends \advanced_testcase {
     public function test_settings_page_renders(): void {
         global $CFG, $PAGE;

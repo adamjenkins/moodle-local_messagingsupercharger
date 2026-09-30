@@ -27,14 +27,15 @@ use local_messagingsupercharger\local\reactions;
 use local_messagingsupercharger\local\scheduler;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(provider::class)]
 /**
  * Tests for the privacy provider.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \provider
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(provider::class)]
 final class provider_test extends provider_testcase {
     /** @var \stdClass */
     protected $ann;

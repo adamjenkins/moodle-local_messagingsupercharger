@@ -23,16 +23,19 @@ use local_messagingsupercharger\local\pins;
 use local_messagingsupercharger\local\reactions;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\editing::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\cleanup::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\observer::class)]
 /**
  * Tests for editing, revisions, delete for everyone and cleanup of plugin data.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\editing
+ * @covers \local_messagingsupercharger\local\cleanup
+ * @covers \local_messagingsupercharger\observer
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\editing::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\cleanup::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\observer::class)]
 final class editing_test extends \advanced_testcase {
     /** @var \stdClass */
     protected $alice;

@@ -20,6 +20,8 @@ use local_messagingsupercharger\local\attachments;
 use local_messagingsupercharger\local\cleanup;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\attachments::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\cleanup::class)]
 /**
  * Tests for attachment safety and limits: content checks, antivirus, rate limit, quota
  * and retention.
@@ -27,9 +29,9 @@ use local_messagingsupercharger\local\sender;
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\attachments
+ * @covers \local_messagingsupercharger\local\cleanup
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\attachments::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\cleanup::class)]
 final class attachments_test extends \advanced_testcase {
     /** @var \local_messagingsupercharger_generator */
     protected $generator;

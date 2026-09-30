@@ -18,14 +18,15 @@ namespace local_messagingsupercharger;
 
 use local_messagingsupercharger\local\linkpreviews;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\linkpreviews::class)]
 /**
  * Tests for link previews: the request-forgery guards and page parsing. No network use.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\linkpreviews
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\linkpreviews::class)]
 final class linkpreviews_test extends \advanced_testcase {
     /**
      * Addresses.

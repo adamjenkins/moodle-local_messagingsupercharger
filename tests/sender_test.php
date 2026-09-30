@@ -20,15 +20,17 @@ use core_message\api;
 use local_messagingsupercharger\local\attachments;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\sender::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\attachments::class)]
 /**
  * Tests for sending messages with attachments and rich text, and attachment access.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\sender
+ * @covers \local_messagingsupercharger\local\attachments
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\sender::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\attachments::class)]
 final class sender_test extends \advanced_testcase {
     /** @var \stdClass */
     protected $alice;

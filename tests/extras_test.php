@@ -23,16 +23,19 @@ use local_messagingsupercharger\local\pins;
 use local_messagingsupercharger\local\reactions;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\extras::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\reactions::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\pins::class)]
 /**
  * Tests for reactions, pins, seen-by and the conversation extras web service.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\extras
+ * @covers \local_messagingsupercharger\local\reactions
+ * @covers \local_messagingsupercharger\local\pins
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\extras::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\reactions::class)]
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\pins::class)]
 final class extras_test extends \advanced_testcase {
     /** @var \stdClass[] */
     protected $users = [];

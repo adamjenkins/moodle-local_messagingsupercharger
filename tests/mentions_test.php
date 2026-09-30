@@ -20,14 +20,15 @@ use core_message\api;
 use local_messagingsupercharger\local\mentions;
 use local_messagingsupercharger\local\sender;
 
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\mentions::class)]
 /**
  * Tests for mentions.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \local_messagingsupercharger\local\mentions
  */
-#[\PHPUnit\Framework\Attributes\CoversClass(\local_messagingsupercharger\local\mentions::class)]
 final class mentions_test extends \advanced_testcase {
     /** @var \stdClass[] */
     protected $users = [];
