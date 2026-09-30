@@ -111,7 +111,29 @@ class send_messages extends external_api {
         $conversation = conversations::get($conversationid);
         $candeleteforall = has_capability('moodle/site:deleteanymessage', conversations::context($conversation));
 
-        // Check every message before sending any, so that a batch never half-sends.
+        // Check every message before sending any, so that a batch never half-sends. Two
+        // messages may not claim the same files: the first would take them from the second.
+        $claimed = [];
+        foreach ($params['messages'] as $message) {
+            foreach (['draftitemid' => $message['filenames'] ?: ['*'], 'editordraftitemid' => ['*']] as $area => $names) {
+                if ((int)$message[$area] <= 0) {
+                    continue;
+                }
+                foreach ($names as $name) {
+                    $key = $message[$area] . '/' . $name;
+                    $all = $message[$area] . '/*';
+                    if (
+                        isset($claimed[$key]) || isset($claimed[$all]) || ($name === '*' && preg_grep(
+                            '~^' . preg_quote($message[$area] . '/', '~') . '~',
+                            array_keys($claimed)
+                        ))
+                    ) {
+                        throw new \invalid_parameter_exception('Two messages attach the same files');
+                    }
+                    $claimed[$key] = true;
+                }
+            }
+        }
         foreach ($params['messages'] as $message) {
             sender::precheck(
                 (int)$USER->id,

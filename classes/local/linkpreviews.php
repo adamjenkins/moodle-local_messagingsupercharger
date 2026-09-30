@@ -79,8 +79,9 @@ class linkpreviews {
      */
     public static function queue_for_html(string $html): void {
         global $DB;
-        // Only links that survive core's HTML cleaning, i.e. that readers can actually see.
-        foreach (self::extract_urls(purify_html($html)) as $url) {
+        // The same extraction as for_messages() uses when displaying, so the stored URL (and
+        // its hash) is the one looked up later.
+        foreach (self::extract_urls($html) as $url) {
             if (!self::is_allowed_url($url)) {
                 continue;
             }
@@ -438,20 +439,29 @@ class linkpreviews {
         if ($url === false || $userid <= 0) {
             return false;
         }
-        // The URL appears in the message HTML with & written as &amp;.
-        $needle = htmlspecialchars($url, ENT_QUOTES | ENT_HTML5, 'UTF-8', false);
-        $like = $DB->sql_like('m.smallmessage', ':url', true, true);
+        // The URL can appear in message HTML raw or escaped (&amp;, &#039; or &apos;).
+        $needles = array_unique([
+            $url,
+            htmlspecialchars($url, ENT_QUOTES | ENT_HTML401, 'UTF-8', false),
+            htmlspecialchars($url, ENT_QUOTES | ENT_HTML5, 'UTF-8', false),
+        ]);
+        $likes = [];
+        $params = [];
+        foreach (array_values($needles) as $i => $needle) {
+            $likes[] = $DB->sql_like('m.smallmessage', ':url' . $i, true, true);
+            $params['url' . $i] = '%' . $DB->sql_like_escape($needle) . '%';
+        }
+        $like = '(' . implode(' OR ', $likes) . ')';
         $sql = "SELECT 1
                   FROM {messages} m
                   JOIN {message_conversation_members} mcm ON mcm.conversationid = m.conversationid AND mcm.userid = :userid
              LEFT JOIN {message_user_actions} mua
                     ON mua.messageid = m.id AND mua.userid = :userid2 AND mua.action = :deleted
                  WHERE mua.id IS NULL AND $like";
-        return $DB->record_exists_sql($sql, [
+        return $DB->record_exists_sql($sql, $params + [
             'userid' => $userid,
             'userid2' => $userid,
             'deleted' => \core_message\api::MESSAGE_ACTION_DELETED,
-            'url' => '%' . $DB->sql_like_escape($needle) . '%',
         ]);
     }
 

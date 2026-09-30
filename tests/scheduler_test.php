@@ -246,6 +246,45 @@ final class scheduler_test extends \advanced_testcase {
         scheduler::update($id, (int)$this->alice->id, 'Changed', time() + HOURSECS);
     }
 
+    public function test_claim_is_exclusive(): void {
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'Once',
+            FORMAT_PLAIN,
+            time() + HOURSECS
+        );
+        $this->assertNotNull(scheduler::claim($id));
+        $this->assertNull(scheduler::claim($id));
+    }
+
+    public function test_cannot_cancel_while_sending_and_interrupted_sends_fail(): void {
+        global $DB;
+        $id = scheduler::schedule(
+            (int)$this->alice->id,
+            (int)$this->conversation->id,
+            'Busy',
+            FORMAT_PLAIN,
+            time() + HOURSECS
+        );
+        $this->assertNotNull(scheduler::claim($id));
+        try {
+            scheduler::cancel($id, (int)$this->alice->id);
+            $this->fail('Cancelled a message being sent');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('schedulebeingsent', $e->errorcode);
+        }
+        // The sender died: after a while the row is marked failed (not retried).
+        $DB->set_field('local_messagingsupercharger_sched', 'timemodified', time() - 2 * HOURSECS, ['id' => $id]);
+        scheduler::fail_interrupted();
+        $row = $DB->get_record('local_messagingsupercharger_sched', ['id' => $id]);
+        $this->assertEquals(scheduler::STATUS_FAILED, $row->status);
+        $this->assertSame('failedinterrupted', $row->failreason);
+        // Now it can be cancelled.
+        scheduler::cancel($id, (int)$this->alice->id);
+        $this->assertFalse($DB->record_exists('local_messagingsupercharger_sched', ['id' => $id]));
+    }
+
     public function test_scheduled_attaches_only_named_files(): void {
         global $DB;
         $generator = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger');

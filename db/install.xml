@@ -123,7 +123,7 @@
         <FIELD NAME="attachsetid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="mentions" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON list of mentioned user ids"/>
         <FIELD NAME="timesend" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-        <FIELD NAME="status" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="0 pending, 1 failed"/>
+        <FIELD NAME="status" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="0 pending, 1 failed (or cancelled), 2 being sent"/>
         <FIELD NAME="failreason" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Lang string key explaining a failure"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>

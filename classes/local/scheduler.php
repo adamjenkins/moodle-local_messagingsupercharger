@@ -89,7 +89,12 @@ class scheduler {
         $conversation = conversations::get($conversationid);
         conversations::require_capability('schedulesend', $conversation, $userid);
         self::validate_time($timesend);
-        if ($DB->count_records('local_messagingsupercharger_sched', ['userid' => $userid]) >= self::MAX_PENDING) {
+        $waiting = $DB->count_records_select(
+            'local_messagingsupercharger_sched',
+            'userid = ? AND status <> ?',
+            [$userid, self::STATUS_FAILED]
+        );
+        if ($waiting >= self::MAX_PENDING) {
             throw new \moodle_exception('toomanyscheduled', features::COMPONENT, '', self::MAX_PENDING);
         }
         $mentions = mentions::resolve($conversation, $userid, $mentionids);
@@ -179,14 +184,23 @@ class scheduler {
             !empty($row->attachsetid),
             array_keys($mentions)
         );
-        $DB->update_record('local_messagingsupercharger_sched', (object)[
-            'id' => $row->id,
+        // Conditional on the row not having been claimed for sending since it was read, so an
+        // edit can never reopen a message that is going out right now.
+        $DB->execute("UPDATE {local_messagingsupercharger_sched}
+                         SET body = :body, timesend = :timesend, status = :pending, failreason = NULL,
+                             timemodified = :now
+                       WHERE id = :id AND status <> :sending", [
             'body' => $text,
             'timesend' => $timesend,
-            'status' => self::STATUS_PENDING,
-            'failreason' => null,
-            'timemodified' => time(),
+            'pending' => self::STATUS_PENDING,
+            'now' => time(),
+            'id' => $row->id,
+            'sending' => self::STATUS_SENDING,
         ]);
+        $after = $DB->get_record('local_messagingsupercharger_sched', ['id' => $row->id], 'id, status, timesend');
+        if (!$after || (int)$after->status === self::STATUS_SENDING || (int)$after->timesend !== $timesend) {
+            throw new \moodle_exception('schedulebeingsent', features::COMPONENT);
+        }
         if ((int)$row->timesend !== $timesend || (int)$row->status !== self::STATUS_PENDING) {
             self::queue((int)$row->id, $timesend);
         }
@@ -200,7 +214,20 @@ class scheduler {
      * @throws \moodle_exception
      */
     public static function cancel(int $id, int $userid): void {
+        global $DB;
         $row = self::require_own($id, $userid);
+        // Take it out of the queue in one conditional step, so a send in progress is never
+        // cancelled halfway (its attachments are being attached to the message).
+        $DB->execute("UPDATE {local_messagingsupercharger_sched} SET status = :failed, failreason = :reason
+                       WHERE id = :id AND status <> :sending", [
+            'failed' => self::STATUS_FAILED,
+            'reason' => 'cancelled',
+            'id' => $row->id,
+            'sending' => self::STATUS_SENDING,
+        ]);
+        if ($DB->get_field('local_messagingsupercharger_sched', 'failreason', ['id' => $row->id]) !== 'cancelled') {
+            throw new \moodle_exception('schedulebeingsent', features::COMPONENT);
+        }
         cleanup::purge_scheduled((int)$row->id);
     }
 
@@ -252,23 +279,12 @@ class scheduler {
         ) {
             return null;
         }
-        // Claim the row atomically: the task and the hourly catch-up may both try to send it.
-        // One UPDATE both changes the status and stamps our token, and only one runner's
-        // UPDATE can match a pending row, so reading our token back proves the claim.
-        $token = 'claim:' . random_string(20);
-        $DB->execute("UPDATE {local_messagingsupercharger_sched}
-                         SET status = :sending, failreason = :token
-                       WHERE id = :id AND status = :pending", [
-            'sending' => self::STATUS_SENDING,
-            'token' => $token,
-            'id' => $row->id,
-            'pending' => self::STATUS_PENDING,
-        ]);
-        if ($DB->get_field('local_messagingsupercharger_sched', 'failreason', ['id' => $row->id]) !== $token) {
+        if (self::claim((int)$row->id) === null) {
             return null;
         }
         $reason = self::delivery_failure((int)$row->userid, (int)$row->conversationid);
         if ($reason === null) {
+            $message = null;
             try {
                 $message = sender::send(
                     (int)$row->userid,
@@ -280,11 +296,13 @@ class scheduler {
                     json_decode((string)$row->mentions, true) ?: [],
                     $row->attachsetid ? (int)$row->attachsetid : null
                 );
-                $DB->delete_records('local_messagingsupercharger_sched', ['id' => $row->id]);
-                return (int)$message->id;
             } catch (\Throwable $e) {
                 // Nothing was sent: sender::send() only throws before sending.
                 $reason = 'failedcannotsend';
+            }
+            if ($message) {
+                $DB->delete_records('local_messagingsupercharger_sched', ['id' => $row->id]);
+                return (int)$message->id;
             }
         }
         $DB->update_record('local_messagingsupercharger_sched', (object)[
@@ -294,6 +312,47 @@ class scheduler {
             'timemodified' => time(),
         ]);
         return null;
+    }
+
+    /**
+     * Claim a pending row for sending. One UPDATE both changes the status and stamps a
+     * token, and only one runner's UPDATE can match a pending row, so reading the token
+     * back proves the claim. The claim time is recorded, so an interrupted send can be
+     * found later.
+     *
+     * @param int $id
+     * @return string|null The claim token, or null if someone else has the row
+     */
+    public static function claim(int $id): ?string {
+        global $DB;
+        $token = 'claim:' . random_string(20);
+        $DB->execute("UPDATE {local_messagingsupercharger_sched}
+                         SET status = :sending, failreason = :token, timemodified = :now
+                       WHERE id = :id AND status = :pending", [
+            'sending' => self::STATUS_SENDING,
+            'token' => $token,
+            'now' => time(),
+            'id' => $id,
+            'pending' => self::STATUS_PENDING,
+        ]);
+        return $DB->get_field('local_messagingsupercharger_sched', 'failreason', ['id' => $id]) === $token ? $token : null;
+    }
+
+    /**
+     * Rows left claimed by a sender that died (fatal error, time or memory limit): mark
+     * them failed, without retrying, because the message may or may not have gone out.
+     *
+     * @param int $olderthan Seconds since the claim
+     */
+    public static function fail_interrupted(int $olderthan = HOURSECS): void {
+        global $DB;
+        $DB->execute("UPDATE {local_messagingsupercharger_sched} SET status = :failed, failreason = :reason
+                       WHERE status = :sending AND timemodified < :cutoff", [
+            'failed' => self::STATUS_FAILED,
+            'reason' => 'failedinterrupted',
+            'sending' => self::STATUS_SENDING,
+            'cutoff' => time() - $olderthan,
+        ]);
     }
 
     /**

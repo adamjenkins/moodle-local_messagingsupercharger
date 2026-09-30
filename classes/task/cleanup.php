@@ -47,6 +47,7 @@ class cleanup extends \core\task\scheduled_task {
             mtrace("Sent $sent overdue held message email(s).");
         }
         cleaner::sweep();
+        scheduler::fail_interrupted();
 
         // Scheduled messages whose delivery task never ran (deliver() ignores any that
         // were sent, changed or cancelled meanwhile).

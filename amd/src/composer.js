@@ -156,6 +156,8 @@ export default class Composer {
     reset() {
         this.dropPending(this.pending, true);
         this.pending = [];
+        // A fresh draft area: nothing left behind here can reach another conversation.
+        this.draftitemid = 0;
         this.renderPending();
         Interceptor.reset();
     }
@@ -520,6 +522,10 @@ export default class Composer {
     clearAfterSend(sent) {
         this.dropPending(sent, false);
         this.pending = this.pending.filter((item) => !sent.includes(item) && item.status !== 'error');
+        if (!this.pending.length) {
+            // The sent files travel with their own draft id; start the next message afresh.
+            this.draftitemid = 0;
+        }
         this.renderPending();
         this.controller.mentions.reset();
         this.controller.requestExtrasSoon(1500);
@@ -559,6 +565,9 @@ export default class Composer {
             const uploaded = this.pending.filter((item) => item.status === 'done');
             this.dropPending(uploaded, false);
             this.pending = this.pending.filter((item) => !uploaded.includes(item));
+            if (!this.pending.length) {
+                this.draftitemid = 0;
+            }
             this.renderPending();
             this.skipNextSend = true;
             send.click();

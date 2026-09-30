@@ -43,6 +43,22 @@ const FORMAT_MOODLE = 0;
 
 let installed = false;
 let queue = [];
+/** Bumped when the conversation changes: extras of an older conversation are never reused. */
+let generation = 0;
+
+/**
+ * The form core shows while sending (and resends on Retry): core_message's previewText()
+ * turns line breaks into <br> and drops tags. Matching on this form, with both sides
+ * normalised the same way, makes a Retry of a multi-line message find its extras.
+ *
+ * @param {String} text
+ * @returns {String}
+ */
+const normalise = (text) => String(text)
+    .replace(/<br[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n+/g, '\n')
+    .trim();
 
 /**
  * Register extras for the next message sent with this exact text.
@@ -51,7 +67,7 @@ let queue = [];
  * @param {Object} payload {text, format, draftitemid, editordraftitemid, filenames, mentions}
  */
 export const register = (text, payload) => {
-    queue.push({text: text.trim(), payload});
+    queue.push({text: normalise(text), payload, generation});
 };
 
 /**
@@ -59,6 +75,7 @@ export const register = (text, payload) => {
  */
 export const reset = () => {
     queue = [];
+    generation++;
 };
 
 /**
@@ -68,7 +85,8 @@ export const reset = () => {
  * @returns {Object|null}
  */
 const take = (text) => {
-    const index = queue.findIndex((entry) => entry.text === String(text).trim());
+    const wanted = normalise(text);
+    const index = queue.findIndex((entry) => entry.text === wanted && entry.generation === generation);
     if (index < 0) {
         return null;
     }
@@ -131,13 +149,18 @@ export const install = () => {
         if (!queue.length || !Array.isArray(requests)) {
             return original.call(this, requests, ...rest);
         }
+        const sentin = generation;
         const used = requests.map(rewrite);
         const promises = original.call(this, requests, ...rest);
         // If a rerouted send fails, put its extras back, so that core's "Retry" (which
         // resends the same text) is rerouted again rather than sent without them.
         used.forEach((pairs, index) => {
             if (pairs && promises && promises[index] && promises[index].fail) {
-                promises[index].fail(() => pairs.forEach(([text, payload]) => register(text, payload)));
+                promises[index].fail(() => {
+                    if (sentin === generation) {
+                        pairs.forEach(([text, payload]) => register(text, payload));
+                    }
+                });
             }
         });
         return promises;

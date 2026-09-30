@@ -138,6 +138,9 @@ class sender {
             array_keys($mentions)
         );
         attachments::validate_files($attached);
+        foreach ($inline as $file) {
+            attachments::validate_file($file->get_filename(), (int)$file->get_filesize());
+        }
     }
 
     /**

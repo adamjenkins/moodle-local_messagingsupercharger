@@ -81,7 +81,6 @@ export default class Mentions {
         this.list = el('ul', {id: uniqueId('msgsc-mentions'), className: 'msgsc-mention-list list-unstyled',
             role: 'listbox', 'aria-label': str('mentionlist'), hidden: true});
         textarea.parentNode.parentNode.insertBefore(this.list, textarea.parentNode);
-        textarea.setAttribute('role', 'combobox');
         textarea.setAttribute('aria-autocomplete', 'list');
         textarea.setAttribute('aria-controls', this.list.id);
         textarea.setAttribute('aria-expanded', 'false');
@@ -191,10 +190,14 @@ export default class Mentions {
             });
             this.list.appendChild(option);
         });
+        // Announce when the list opens or its size changes, not on every arrow key.
+        if (this.list.hidden || this.announced !== this.candidates.length) {
+            this.announced = this.candidates.length;
+            this.controller.composer.announce(this.candidates.length ? `${this.candidates.length} ${str('mentionlist')}`
+                : str('nomentions'));
+        }
         this.list.hidden = false;
         textarea.setAttribute('aria-expanded', 'true');
-        this.controller.composer.announce(this.candidates.length ? `${this.candidates.length} ${str('mentionlist')}`
-            : str('nomentions'));
         if (this.active >= 0) {
             textarea.setAttribute('aria-activedescendant', `${this.list.id}-${this.candidates[this.active].id}`);
         } else {
@@ -210,6 +213,7 @@ export default class Mentions {
         this.request++;
         this.candidates = [];
         this.active = -1;
+        this.announced = -1;
         if (this.list) {
             this.list.hidden = true;
             this.list.textContent = '';

@@ -146,6 +146,25 @@ final class sender_test extends \advanced_testcase {
         $this->assertSame($before, $DB->count_records('messages'));
     }
 
+    public function test_batch_messages_cannot_claim_the_same_files(): void {
+        global $DB;
+        $this->redirectMessages();
+        $draftitemid = file_get_unused_draft_itemid();
+        $this->generator->create_draft_file($this->alice, $draftitemid, 'a.txt');
+        $before = $DB->count_records('messages');
+        $this->expectException(\invalid_parameter_exception::class);
+        try {
+            external\send_messages::execute((int)$this->conversation->id, 0, [
+                ['text' => '', 'format' => FORMAT_PLAIN, 'draftitemid' => $draftitemid, 'editordraftitemid' => 0,
+                    'mentions' => [], 'filenames' => ['a.txt']],
+                ['text' => '', 'format' => FORMAT_PLAIN, 'draftitemid' => $draftitemid, 'editordraftitemid' => 0,
+                    'mentions' => [], 'filenames' => ['a.txt']],
+            ]);
+        } finally {
+            $this->assertSame($before, $DB->count_records('messages'));
+        }
+    }
+
     public function test_ordinary_message_in_a_batch_is_sent_as_core_would(): void {
         $this->redirectMessages();
         $message = sender::send($this->alice->id, $this->conversation->id, '<b>hi</b>', FORMAT_MOODLE);

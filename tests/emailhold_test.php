@@ -192,13 +192,21 @@ final class emailhold_test extends \advanced_testcase {
         $this->assertSame(0, $sink->count());
     }
 
-    public function test_emailstop_set_during_hold_does_not_drop_the_email(): void {
-        // Core decided at send time that this person gets the email (a forced setting can
-        // override emailstop); the hold must not change that decision.
+    public function test_emailstop_set_during_hold_is_honoured_unless_forced(): void {
+        global $DB;
         $sink = $this->redirectEmails();
-        $this->send('Still coming');
-        set_user_preference('emailstop', 1, $this->recipient);
-        $GLOBALS['DB']->set_field('user', 'emailstop', 1, ['id' => $this->recipient->id]);
+        $this->send('Stop, please');
+        $DB->set_field('user', 'emailstop', 1, ['id' => $this->recipient->id]);
+        $this->make_due();
+        $this->assertSame(0, emailhold::send_due());
+        $this->assertSame(0, $sink->count());
+
+        // With message email forced by the site, core ignores emailstop, and so do we.
+        $DB->set_field('user', 'emailstop', 0, ['id' => $this->recipient->id]);
+        $this->send('Forced');
+        $DB->set_field('user', 'emailstop', 1, ['id' => $this->recipient->id]);
+        set_config('email_provider_moodle_instantmessage_locked', 1, 'message');
+        set_config('message_provider_moodle_instantmessage_enabled', 'email,popup', 'message');
         $this->make_due();
         $this->assertSame(1, emailhold::send_due());
         $this->assertSame(1, $sink->count());

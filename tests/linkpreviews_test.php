@@ -142,6 +142,18 @@ final class linkpreviews_test extends \advanced_testcase {
         \core_message\api::delete_message((int)$ben->id, (int)$message->id);
         $this->assertFalse(linkpreviews::can_view_preview($previewid, (int)$ben->id));
         $this->assertFalse(linkpreviews::can_view_preview($previewid + 1000, (int)$ann->id));
+
+        // A message written with a raw & in its link (core-sent or from another client).
+        \core_message\api::send_message_to_conversation(
+            (int)$ann->id,
+            (int)$conversation->id,
+            '<a href="https://example.com/x?y=1&z=2">link</a>',
+            FORMAT_HTML
+        );
+        $rawid = $DB->insert_record('local_messagingsupercharger_preview', (object)['urlhash' => sha1('y'),
+            'url' => 'https://example.com/x?y=1&z=2', 'status' => linkpreviews::STATUS_OK, 'hasimage' => 1,
+            'timefetched' => time()]);
+        $this->assertTrue(linkpreviews::can_view_preview($rawid, (int)$ann->id));
     }
 
     public function test_previews_off_by_default_and_not_queued(): void {

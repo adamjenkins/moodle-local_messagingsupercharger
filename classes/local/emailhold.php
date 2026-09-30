@@ -113,6 +113,20 @@ class emailhold {
     }
 
     /**
+     * Is email for personal messages locked on and forced by the site?
+     *
+     * @return bool
+     */
+    protected static function email_forced(): bool {
+        global $CFG;
+        require_once($CFG->dirroot . '/message/lib.php');
+        $defaults = get_message_output_default_preferences();
+        $locked = !empty($defaults->{'email_provider_moodle_instantmessage_locked'});
+        $enabled = (string)($defaults->{'message_provider_moodle_instantmessage_enabled'} ?? '');
+        return $locked && in_array('email', explode(',', $enabled), true);
+    }
+
+    /**
      * Send every due held email, optionally only those for one message.
      *
      * @param int|null $messageid
@@ -181,9 +195,13 @@ class emailhold {
         }
         $recipient = \core_user::get_user($row->useridto);
         $sender = \core_user::get_user($row->useridfrom);
-        // No emailstop check: core already applied it (or a forced setting overrode it) when it
-        // chose to call the email processor for this recipient.
         if (!$recipient || !$sender || $recipient->deleted || $recipient->suspended) {
+            return false;
+        }
+        // Honour "stop all email" switched on during the hold, unless an administrator forces
+        // message email: the same decision core makes when it picks processors
+        // (lib/classes/message/manager.php).
+        if (!empty($recipient->emailstop) && !self::email_forced()) {
             return false;
         }
         if (

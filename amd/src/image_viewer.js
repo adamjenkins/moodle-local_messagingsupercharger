@@ -160,6 +160,11 @@ export const prepare = (text) => {
             }
             fitToRealSize(img);
             img.classList.add('msgsc-picture');
+            // Fill the panel (up to the real size) unless the author chose a size for an
+            // embedded image; attached images always fill.
+            if (img.classList.contains('msgsc-attachment-thumb') || !img.hasAttribute('width')) {
+                img.classList.add('msgsc-fill');
+            }
             if (!img.closest('a')) {
                 img.setAttribute('tabindex', '0');
                 img.setAttribute('role', 'button');
