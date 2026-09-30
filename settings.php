@@ -66,10 +66,11 @@ if ($hassiteconfig) {
             5,
             PARAM_INT
         ));
+        // This setting type calls ->out() on its label, so it needs a lang_string.
         $settings->add(new admin_setting_filetypes(
             "{$plugin}/attachmenttypes",
-            get_string('attachmenttypes', $plugin),
-            get_string('attachmenttypes_desc', $plugin),
+            new lang_string('attachmenttypes', $plugin),
+            new lang_string('attachmenttypes_desc', $plugin),
             'web_image,document,archive,.txt'
         ));
 
