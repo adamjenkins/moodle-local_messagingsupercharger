@@ -55,6 +55,9 @@ final class linkpreviews_test extends \advanced_testcase {
     /**
      * Only public addresses are fetched.
      *
+     * The annotation is for PHPUnit 9 (Moodle 4.5), the attribute for PHPUnit 10 and later.
+     *
+     * @dataProvider ip_provider
      * @param string $ip
      * @param bool $expected
      */

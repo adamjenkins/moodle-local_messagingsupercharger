@@ -67,7 +67,7 @@ const openDialogue = async(returnto) => {
     const results = el('ul', {className: 'list-unstyled msgsc-search-results'});
     const more = button(str('loadmore'), {className: 'btn btn-secondary btn-sm', hidden: true});
     const body = el('div', {className: 'msgsc-search'}, [
-        el('label', {'for': inputid, className: 'visually-hidden', text: str('searchmessages')}),
+        el('label', {'for': inputid, className: 'msgsc-sr-only', text: str('searchmessages')}),
         input, status, results, more,
     ]);
 
@@ -99,7 +99,7 @@ const openDialogue = async(returnto) => {
             }
             response.results.forEach((result) => {
                 const choose = button('', {className: 'btn btn-link text-start w-100 p-2 msgsc-search-result'});
-                choose.appendChild(el('span', {className: 'd-block fw-bold', text: result.conversationname}));
+                choose.appendChild(el('span', {className: 'd-block msgsc-bold', text: result.conversationname}));
                 choose.appendChild(el('span', {className: 'd-block small text-muted',
                     text: `${result.author} · ${formatTime(result.timecreated)}`}));
                 choose.appendChild(el('span', {className: 'd-block small', text: result.snippet}));

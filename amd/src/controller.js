@@ -29,6 +29,7 @@
 import Pending from 'core/pending';
 import {subscribe} from 'core/pubsub';
 import MessageDrawerEvents from 'core_message/message_drawer_events';
+import MessageDrawerRoutes from 'core_message/message_drawer_routes';
 import Selectors from 'local_messagingsupercharger/selectors';
 import * as Repository from 'local_messagingsupercharger/repository';
 import * as Interceptor from 'local_messagingsupercharger/send_interceptor';
@@ -56,6 +57,7 @@ export default class Controller {
         this.refreshTimer = null;
         this.extrasTimer = null;
         this.created = {};
+        this.route = {conversationId: null, otherUserId: null};
         this.mentions = new Mentions(this);
         this.composer = new Composer(this);
         this.decorations = new Decorations(this);
@@ -73,6 +75,12 @@ export default class Controller {
             });
             this.scheduleRefresh();
         });
+
+        // Moodle 4.5 does not put the conversation on the footer at all, so there the
+        // conversation comes from core's route changes instead (see routeChanged()).
+        this.routeObserver = new MutationObserver(() => null);
+        this.routeObserver.observe(root, {subtree: true, attributes: true, attributeFilter: ['data-from-panel']});
+        subscribe(MessageDrawerEvents.ROUTE_CHANGED, (record) => this.routeChanged(record));
 
         this.observer = new MutationObserver(() => this.scheduleRefresh());
         this.observer.observe(root, {
@@ -115,6 +123,34 @@ export default class Controller {
     }
 
     /**
+     * Remember the conversation core's router has just opened in this widget.
+     *
+     * The route record does not say which widget (the drawer or the messages page) it
+     * belongs to. Core's router sets data-from-panel on every view of the widget it is
+     * routing, synchronously, just before publishing, so pending attribute records on
+     * this widget mean the change is ours.
+     *
+     * @param {Object} record {route, params}: for a conversation, params are the
+     *     conversation (or its id), an action and the other user's id
+     */
+    routeChanged(record) {
+        if (!this.routeObserver.takeRecords().length || !record) {
+            return;
+        }
+        if (record.route !== MessageDrawerRoutes.VIEW_CONVERSATION) {
+            this.route = {conversationId: null, otherUserId: null};
+            return;
+        }
+        const [conversationOrId, , otherUserId] = record.params || [];
+        const id = conversationOrId && typeof conversationOrId === 'object' ? conversationOrId.id : conversationOrId;
+        this.route = {
+            conversationId: parseInt(id, 10) || null,
+            otherUserId: parseInt(otherUserId, 10) ? String(parseInt(otherUserId, 10)) : null,
+        };
+        this.scheduleRefresh();
+    }
+
+    /**
      * The id of the conversation currently loaded, or null.
      *
      * @returns {Number|null}
@@ -124,9 +160,11 @@ export default class Controller {
         if (!footer) {
             return null;
         }
-        let id = parseInt(footer.getAttribute('data-conversation-id'), 10);
+        // Moodle 5.1 and later mark the footer; 4.5 does not, so use the route there.
+        const marked = footer.hasAttribute('data-conversation-id') || footer.hasAttribute('data-other-user-id');
+        let id = parseInt(marked ? footer.getAttribute('data-conversation-id') : this.route.conversationId, 10);
         if (!Number.isFinite(id)) {
-            const otheruserid = footer.getAttribute('data-other-user-id');
+            const otheruserid = marked ? footer.getAttribute('data-other-user-id') : this.route.otherUserId;
             if (otheruserid && this.created[otheruserid] === undefined) {
                 this.lookUpConversation(otheruserid);
             }

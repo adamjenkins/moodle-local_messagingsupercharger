@@ -79,7 +79,7 @@ export default class Composer {
         if (!content || !textarea || content.querySelector('.msgsc-toolbar')) {
             return;
         }
-        this.live = el('div', {className: 'visually-hidden', 'aria-live': 'polite'});
+        this.live = el('div', {className: 'msgsc-sr-only', 'aria-live': 'polite'});
         this.pendingList = el('ul', {className: 'msgsc-pending list-unstyled', 'aria-label': str('attachments'),
             hidden: true});
         this.fileInput = el('input', {type: 'file', multiple: true, hidden: true, tabindex: '-1',

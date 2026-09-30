@@ -182,7 +182,7 @@ export default class Strip {
             'data-focus-key': 'sched-cancel-' + item.id});
         cancel.addEventListener('click', () => this.cancelScheduled(item));
         return el('li', {className: 'msgsc-scheduled' + (item.failed ? ' failed' : '')}, [
-            el('span', {className: 'small fw-bold', text: formatTime(item.timesend) + ' '}),
+            el('span', {className: 'small msgsc-bold', text: formatTime(item.timesend) + ' '}),
             el('span', {className: 'small', text: text || str('attachments')}),
             item.failed ? el('span', {className: 'small text-danger d-block', text: `${str('failed')}: ${item.failreason}`})
                 : null,

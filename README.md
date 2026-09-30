@@ -44,7 +44,9 @@ once). The PHPUnit suite fails if a future Moodle release stops honouring this.
 
 ## Requirements
 
-- Moodle 5.2 or 5.3 (tested on 5.2.2+ and 5.3rc1), PHP 8.3 or later.
+- Moodle 4.5, 5.1, 5.2 or 5.3 (tested on 4.5.13+, 5.1.6+, 5.2.2+ and 5.3rc1), with the PHP
+  version that Moodle release requires (8.1 or later for 4.5). Moodle 5.0 falls inside the
+  supported range but is not tested.
 - Messaging enabled on the site. The emoji picker, if wanted, is core's
   (`allowemojipicker`).
 
@@ -146,6 +148,10 @@ app are ordinary messages; their email is still held and sent once.
 Everything the plugin assumes about Moodle's messaging page is in two places:
 `amd/src/selectors.js` (the DOM) and `amd/src/send_interceptor.js` (the send web service
 names). Check those two files against the core_message templates and JavaScript.
+Moodle 5.1 and later put the open conversation on the conversation footer; on 4.5 the
+plugin follows the message drawer's route changes instead (`amd/src/controller.js`).
+The styles work with Bootstrap 4 (Moodle 4.5) and 5: Bootstrap 5 variables have fallbacks,
+and the plugin uses its own classes where the two differ.
 
 ## Licence
 

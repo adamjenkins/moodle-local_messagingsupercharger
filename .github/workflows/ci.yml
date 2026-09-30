@@ -13,9 +13,9 @@ jobs:
 
     services:
       postgres:
-        # MOODLE_502_STABLE's minimum (5.2 requires >= 16). A newer image would mask
-        # minimum-version breakage. main/5.3 needs PostgreSQL >= 17 (environment.xml
-        # 5.3 block), so its rows override the image via matrix.pgsql-image.
+        # Each branch's minimum, so minimum-version breakage shows: 16 for 5.2 (the
+        # default), set per row via matrix.pgsql-image for the others (environment.xml:
+        # 4.5 >= 13, 5.1 >= 15, main/5.3 >= 17).
         image: ${{ matrix.database == 'pgsql' && (matrix.pgsql-image || 'postgres:16') || '' }}
         env:
           POSTGRES_USER: 'postgres'
@@ -25,8 +25,9 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
 
       mariadb:
-        # MOODLE_502_STABLE's minimum (5.2 requires >= 10.11). main/5.3 needs
-        # MariaDB >= 11.4 (environment.xml 5.3 block), set via matrix.mariadb-image.
+        # Each branch's minimum: 10.11 for 5.1 and 5.2 (the default), set per row via
+        # matrix.mariadb-image for the others (environment.xml: 4.5 >= 10.6.7,
+        # main/5.3 >= 11.4). All these images ship healthcheck.sh.
         image: ${{ matrix.database == 'mariadb' && (matrix.mariadb-image || 'mariadb:10.11') || '' }}
         env:
           MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
@@ -38,12 +39,17 @@ jobs:
 
     strategy:
       fail-fast: false
-      # Moodle 5.2 (blocking) plus moodle.git main = 5.3beta (non-blocking,
-      # experimental). Each at its PHP floor and ceiling (8.3 and 8.4, from the
-      # branch's environment.xml and core's push.yml), with the two database
-      # engines alternating so both are exercised.
+      # Moodle 4.5, 5.1 and 5.2 (blocking) plus moodle.git main = 5.3beta
+      # (non-blocking, experimental). Each at its PHP floor and ceiling (from the
+      # branch's environment.xml and core's push.yml: 4.5 8.1-8.3, 5.1 8.2-8.4,
+      # 5.2 and main 8.3-8.4), with the two database engines alternating so both
+      # are exercised.
       matrix:
         include:
+          - {moodle-branch: MOODLE_405_STABLE, php: '8.1', database: pgsql, pgsql-image: 'postgres:13'}
+          - {moodle-branch: MOODLE_405_STABLE, php: '8.3', database: mariadb, mariadb-image: 'mariadb:10.6'}
+          - {moodle-branch: MOODLE_501_STABLE, php: '8.2', database: mariadb}
+          - {moodle-branch: MOODLE_501_STABLE, php: '8.4', database: pgsql, pgsql-image: 'postgres:15'}
           - {moodle-branch: MOODLE_502_STABLE, php: '8.3', database: mariadb}
           - {moodle-branch: MOODLE_502_STABLE, php: '8.4', database: pgsql}
           - {moodle-branch: main, php: '8.4', database: pgsql, experimental: true, pgsql-image: 'postgres:17', mariadb-image: 'mariadb:11.4'}
@@ -107,10 +113,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci mustache
 
-      # Not on main: the committed amd/build bundles are built with the 5.2
+      # 5.2 only: the committed amd/build bundles are built with the 5.2
       # toolchain, and each branch minifies differently.
       - name: Grunt
-        if: ${{ !cancelled() && matrix.moodle-branch != 'main' }}
+        if: ${{ !cancelled() && matrix.moodle-branch == 'MOODLE_502_STABLE' }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
 
       - name: PHPUnit tests

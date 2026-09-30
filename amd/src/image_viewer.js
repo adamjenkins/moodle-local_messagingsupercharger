@@ -113,7 +113,7 @@ const show = async(image) => {
     const original = el('a', {href: image.src, target: '_blank', rel: 'noopener', className: 'btn btn-link btn-sm',
         text: str('imageoriginal')});
     const caption = image.alt ? el('p', {className: 'small text-muted mb-2', text: image.alt}) : null;
-    const body = el('div', {}, [el('div', {className: 'd-flex gap-2 mb-2'}, [fit, original]), caption, stage]);
+    const body = el('div', {}, [el('div', {className: 'msgsc-viewer-toolbar'}, [fit, original]), caption, stage]);
     // The title is a fixed string: core sets modal titles as HTML.
     const modal = await Modal.create({
         title: str('imageviewer'),

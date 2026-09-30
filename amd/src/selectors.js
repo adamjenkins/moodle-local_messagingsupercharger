@@ -42,7 +42,8 @@ export default {
 
     // The conversation view: body (message_drawer_view_conversation_body.mustache) and
     // footer (message_drawer_view_conversation_footer.mustache) share this data-region.
-    // The footer carries data-conversation-id once a conversation is loaded.
+    // From Moodle 5.1 the footer carries data-conversation-id once a conversation is loaded
+    // (4.5 does not; the controller follows core's route changes there).
     VIEW_CONVERSATION: '[data-region="view-conversation"]',
 
     // Scrolling list of days and messages (message_drawer_view_conversation_body.mustache).
