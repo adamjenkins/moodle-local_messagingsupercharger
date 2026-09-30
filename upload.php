@@ -68,11 +68,9 @@ try {
     if ($filename === '') {
         $filename = 'file';
     }
-    $filesize = (int)filesize($upload['tmp_name']);
-    attachments::validate_file($filename, $filesize);
-    if (count(attachments::draft_files((int)$USER->id, $draftitemid)) >= features::max_attachments()) {
-        throw new moodle_exception('toomanyattachments', 'local_messagingsupercharger', '', features::max_attachments());
-    }
+    // Name, size, count, core's upload rate limit, quota, contents and antivirus
+    // (core's antivirus manager, which deletes an infected upload).
+    attachments::check_upload($upload['tmp_name'], $filename, (int)$USER->id, $draftitemid);
     // Pasted images arrive as "image.png" every time; keep names unique in the area.
     $usercontext = context_user::instance($USER->id);
     $fs = get_file_storage();

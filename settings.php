@@ -74,6 +74,25 @@ if ($hassiteconfig) {
             'web_image,document,archive,.txt'
         ));
 
+        $quotas = [0 => get_string('unlimited')];
+        foreach ([10, 50, 100, 250, 500, 1024, 2048, 5120] as $megabytes) {
+            $quotas[$megabytes * 1024 * 1024] = display_size($megabytes * 1024 * 1024);
+        }
+        $settings->add(new admin_setting_configselect(
+            "{$plugin}/userquota",
+            get_string('userquota', $plugin),
+            get_string('userquota_desc', $plugin),
+            100 * 1024 * 1024,
+            $quotas
+        ));
+        $settings->add(new admin_setting_configduration(
+            "{$plugin}/attachmentretention",
+            get_string('attachmentretention', $plugin),
+            get_string('attachmentretention_desc', $plugin),
+            0,
+            DAYSECS
+        ));
+
         // Editing and email.
         $settings->add(new admin_setting_heading(
             "{$plugin}/editingheading",

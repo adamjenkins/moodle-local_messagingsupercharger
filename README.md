@@ -62,6 +62,8 @@ Site administration > Plugins > Local plugins > Messaging Supercharger:
   allowed file types.
 - Edit window (default 15 minutes; 0 = no limit), email delay (default 2 minutes; 0 = let
   Moodle send immediately), and whether to skip the email if the message was read.
+- Attachment storage per user (default 100 MB; unlimited is allowed) and how long
+  attachments are kept (default: as long as the message).
 - Link previews: an optional list of allowed domains.
 - How often an open conversation refreshes reactions, edits, pins and "seen by".
 
@@ -97,6 +99,22 @@ messages are checked again when they are sent.
 - Attachments are stored by the plugin in the system context and served only to members
   of the conversation the message belongs to (and to the uploader). Anything that is not
   an image is always sent as a download.
+- Every upload is checked on the server, whatever the browser did: allowed type and size,
+  number of files, Moodle's own limit on how fast drafts may be created, and the person's
+  storage quota. Then its contents are checked: programs, installers and scripts are
+  refused whatever they are called, and images, PDFs and plain text must really be what
+  their extension says (an `.exe` renamed `.pdf` is refused). Other types, such as office
+  documents and archives, cannot be told apart reliably by content, so for those the
+  protection is the site's antivirus.
+- Uploads are scanned by the site's antivirus plugins through Moodle's own antivirus
+  manager (Site administration > Plugins > Antivirus plugins), exactly as Moodle scans
+  other uploads, with the same logging, notifications and quarantine. The plugin has no
+  scanner of its own; with no antivirus plugin enabled, nothing is scanned.
+- Files are checked again when the message is sent, so a file placed in the draft area some
+  other way is refused too.
+- Retention: when "Keep attachments for" is set, an hourly task deletes the attachments
+  and embedded images of older messages. The message itself stays, with its text, and says
+  that its attachments have expired.
 - Message text is cleaned by Moodle's own formatting, as for any message.
 - Link previews make the server fetch pages that users link to, so they are off by
   default. When on, previews are fetched once, when a message is sent (never when someone

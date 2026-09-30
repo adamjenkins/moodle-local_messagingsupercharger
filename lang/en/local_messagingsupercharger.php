@@ -26,8 +26,13 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['addreaction'] = 'Add reaction';
 $string['attachfile'] = 'Attach files';
+$string['attachmentcontentmismatch'] = 'The contents of "{$a}" do not match its file type, so it cannot be attached.';
+$string['attachmentexecutable'] = '"{$a}" is a program or script, which cannot be attached.';
 $string['attachmentonly'] = 'Attachment: {$a}';
+$string['attachmentretention'] = 'Keep attachments for';
+$string['attachmentretention_desc'] = 'Delete files attached to messages this long after the message was sent. The message itself stays, with a note that its attachments have expired. 0 keeps attachments as long as the message exists.';
 $string['attachments'] = 'Attachments';
+$string['attachmentsexpired'] = 'Attachments to this message have expired.';
 $string['attachmentsheading'] = 'Attachments';
 $string['attachmenttoolarge'] = '"{$a->name}" is larger than the maximum of {$a->max}.';
 $string['attachmenttoolargejs'] = 'Too large: {$a}';
@@ -183,6 +188,7 @@ $string['privacy:metadata:preference:showseenby'] = 'Whether the person shows, a
 $string['privacy:pins'] = 'Pinned messages';
 $string['privacy:reactions'] = 'Reactions';
 $string['privacy:scheduled'] = 'Scheduled messages';
+$string['quotaexceeded'] = 'You have reached the limit of {$a} for files attached to messages. Delete some messages with attachments, or ask your administrator.';
 $string['reactedwith'] = 'Reacted:';
 $string['reaction_heart'] = 'Heart';
 $string['reaction_laugh'] = 'Laugh';
@@ -219,3 +225,5 @@ $string['unknownuser'] = 'Unknown user';
 $string['unpinmessage'] = 'Unpin';
 $string['uploadfailed'] = 'The file could not be uploaded.';
 $string['uploading'] = 'Uploading';
+$string['userquota'] = 'Attachment storage per user';
+$string['userquota_desc'] = 'The most each person can have stored in files attached to messages (their own sent and scheduled messages). Every upload and send is checked against it.';

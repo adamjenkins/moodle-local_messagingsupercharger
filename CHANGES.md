@@ -14,4 +14,7 @@ First release.
 - Message search across all conversations; "seen by" in group conversations.
 - Link previews (off by default, protected against server-side request forgery).
 - Resizable message drawer.
+- Attachment safety: server-side content checks (programs and disguised files refused),
+  scanning by the site's antivirus through Moodle's antivirus manager, Moodle's draft upload
+  rate limit, a per-user storage quota and optional attachment retention.
 - Moodle 5.2 and 5.3.

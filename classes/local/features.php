@@ -139,6 +139,25 @@ class features {
     }
 
     /**
+     * Most bytes of attachments one user may keep in messages, 0 meaning no limit.
+     *
+     * @return int
+     */
+    public static function user_quota(): int {
+        $quota = get_config(self::COMPONENT, 'userquota');
+        return $quota === false ? 100 * 1024 * 1024 : max(0, (int)$quota);
+    }
+
+    /**
+     * Seconds after which sent attachments are deleted, 0 meaning they are kept.
+     *
+     * @return int
+     */
+    public static function attachment_retention(): int {
+        return max(0, (int)get_config(self::COMPONENT, 'attachmentretention'));
+    }
+
+    /**
      * Seconds a sender may edit or delete their message for, 0 meaning no limit.
      *
      * @return int

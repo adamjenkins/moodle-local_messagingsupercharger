@@ -111,6 +111,12 @@
     margin-top: 0.25rem;
 }
 
+.msgsc-attachments-expired {
+    margin-top: 0.25rem;
+    font-style: italic;
+    opacity: 0.75;
+}
+
 .msgsc-attachment-image {
     display: block;
     max-width: 100%;

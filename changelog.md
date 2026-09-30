@@ -18,5 +18,8 @@ All notable changes to this plugin are documented here, newest first, in the
 - Scheduled send, checked again at the time of sending.
 - Message search across all conversations; "seen by" in group conversations.
 - Link previews (off by default, protected against server-side request forgery).
+- Attachment safety: server-side content checks (programs and disguised files refused),
+  scanning by the site's antivirus through Moodle's antivirus manager, Moodle's draft upload
+  rate limit, a per-user storage quota and optional attachment retention.
 - Resizable message drawer.
 - Privacy API provider for all plugin data.

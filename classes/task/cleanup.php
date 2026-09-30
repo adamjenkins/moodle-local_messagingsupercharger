@@ -22,7 +22,8 @@ use local_messagingsupercharger\local\scheduler;
 
 /**
  * Hourly housekeeping: send any held email whose task was lost, and remove plugin data
- * left behind by deletions that core performs without events (groups, courses, privacy).
+ * left behind by deletions that core performs without events (groups, courses, privacy),
+ * and delete attachments past the retention period.
  *
  * @package    local_messagingsupercharger
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -47,6 +48,10 @@ class cleanup extends \core\task\scheduled_task {
             mtrace("Sent $sent overdue held message email(s).");
         }
         cleaner::sweep();
+        $expired = cleaner::expire_attachments();
+        if ($expired) {
+            mtrace("Deleted the attachments of $expired message(s) past the retention period.");
+        }
         scheduler::fail_interrupted();
 
         // Scheduled messages whose delivery task never ran (deliver() ignores any that
