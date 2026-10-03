@@ -1,0 +1,25 @@
+# camp listing manifest — descriptive content for your plugin's page.
+# Edit freely and commit; camp ingests this file at each tagged release.
+# Schema: https://camp-registry.org/schema/listing.schema.json
+name: local_messagingsupercharger
+summary: 'Adds attachments, rich text, mentions, reactions, editing, pins and scheduled send to Moodle messaging, without changing core.'
+description: |
+  Extends the message drawer and messages page for any site that uses Moodle
+  messaging. Users can attach files (paper clip, drag and drop or paste),
+  write in the full rich text editor, @-mention group members, react to,
+  edit, delete and pin messages, schedule a message for later, search all
+  their conversations and widen the drawer. Group conversations can show who
+  has seen the latest message, and optional link previews are off by default.
+  One-to-one message emails are held briefly and sent once with the final
+  text. Each feature can be switched off and is governed by its own capability.
+labels:
+  # Required disclosure labels — pick all that apply (RFC §4.7):
+  #   fully-free | freemium | paid-service | external-account
+  #   donation-supported | commercial-support-available
+  - fully-free
+# screenshots:
+#   - path: .camp/screenshots/overview.png
+#     caption: Main view
+links:
+  docs: https://github.com/adamjenkins/moodle-local_messagingsupercharger#readme
+  issues: https://github.com/adamjenkins/moodle-local_messagingsupercharger/issues
