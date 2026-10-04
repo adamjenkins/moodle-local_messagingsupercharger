@@ -3,6 +3,12 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
+## [0.1.3] - 2026-10-04
+
+### Changed
+
+- Release archives leave out development files (`.github`, `.camp`, `tests` and similar) through `.gitattributes` export-ignore rules, which the camp release workflow requires. No change to the plugin itself; this release carries 0.1.2 to the camp registry.
+
 ## [0.1.2] - 2026-10-04
 
 ### Added
