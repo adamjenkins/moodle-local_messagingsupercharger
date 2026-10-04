@@ -1,4 +1,6 @@
-# Changes in 0.1.0
+# Changes
+
+## v0.1.1
 
 First release.
 
@@ -17,4 +19,4 @@ First release.
 - Attachment safety: server-side content checks (programs and disguised files refused),
   scanning by the site's antivirus through Moodle's antivirus manager, Moodle's draft upload
   rate limit, a per-user storage quota and optional attachment retention.
-- Moodle 4.5, 5.1, 5.2 and 5.3.
+- Moodle 4.5, 5.1, 5.2 and 5.3; installable with Composer (`composer.json`).

@@ -3,7 +3,7 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
-## [0.1.0] - Unreleased
+## [0.1.1] - 2026-10-04
 
 ### Added
 
@@ -18,7 +18,7 @@ All notable changes to this plugin are documented here, newest first, in the
 - Scheduled send, checked again at the time of sending.
 - Message search across all conversations; "seen by" in group conversations.
 - Link previews (off by default, protected against server-side request forgery).
-- Moodle 4.5, 5.1, 5.2 and 5.3.
+- Moodle 4.5, 5.1, 5.2 and 5.3; installable with Composer (`composer.json`).
 - Attachment safety: server-side content checks (programs and disguised files refused),
   scanning by the site's antivirus through Moodle's antivirus manager, Moodle's draft upload
   rate limit, a per-user storage quota and optional attachment retention.
