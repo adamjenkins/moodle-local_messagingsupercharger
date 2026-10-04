@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_messagingsupercharger';
-$plugin->version = 2026100400;
+$plugin->version = 2026100401;
 $plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->supported = [405, 503];
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.1.1';
+$plugin->maturity = MATURITY_BETA;
+$plugin->release = '0.1.2';

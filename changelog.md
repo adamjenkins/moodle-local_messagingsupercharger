@@ -3,6 +3,21 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
+## [0.1.2] - 2026-10-04
+
+### Added
+
+- The full GPL-3.0 licence text as `LICENSE` in the repository root. The plugin's licence is
+  unchanged (GPL-3.0-or-later); the file was simply missing.
+
+### Changed
+
+- Maturity raised from Alpha to Beta.
+- Continuous integration tests against the released Moodle 5.3 (MOODLE_503_STABLE) instead of
+  Moodle's development branch.
+- composer.json: the moodle/moodle requirement uses caret constraints (`^4.5 || ^5.0`), so
+  later Moodle 5.x releases are no longer excluded.
+
 ## [0.1.1] - 2026-10-04
 
 ### Added

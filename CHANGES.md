@@ -1,22 +1,11 @@
 # Changes
 
-## v0.1.1
+## v0.1.2
 
-First release.
-
-- Attachments by button, drag and drop or paste, with progress and clear limit errors;
-  images shown as wide as the panel allows, with a full-size viewer.
-- Rich text editor in a dialogue, with attachments and embedded images.
-- @-mentions in group conversations with their own notification type.
-- Reactions; edit and delete-for-everyone of your own messages with an "edited" marker and
-  earlier versions; pinned messages.
-- Message email for one-to-one conversations held for a short delay and sent once, with
-  the text as it stands.
-- Scheduled send, checked again at the time of sending.
-- Message search across all conversations; "seen by" in group conversations.
-- Link previews (off by default, protected against server-side request forgery).
-- Resizable message drawer.
-- Attachment safety: server-side content checks (programs and disguised files refused),
-  scanning by the site's antivirus through Moodle's antivirus manager, Moodle's draft upload
-  rate limit, a per-user storage quota and optional attachment retention.
-- Moodle 4.5, 5.1, 5.2 and 5.3; installable with Composer (`composer.json`).
+- Maturity raised from Alpha to Beta.
+- The full GPL-3.0 licence text is now included as `LICENSE`. The plugin's licence is
+  unchanged (GPL-3.0-or-later); the file was simply missing.
+- Continuous integration now tests against the released Moodle 5.3 (MOODLE_503_STABLE)
+  instead of Moodle's development branch.
+- composer.json: the moodle/moodle requirement now uses caret constraints
+  (`^4.5 || ^5.0`), so later Moodle 5.x releases are no longer excluded.
