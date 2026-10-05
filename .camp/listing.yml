@@ -17,9 +17,23 @@ labels:
   #   fully-free | freemium | paid-service | external-account
   #   donation-supported | commercial-support-available
   - fully-free
-# screenshots:
-#   - path: .camp/screenshots/overview.png
-#     caption: Main view
+screenshots:
+  - path: .camp/screenshots/01-group-conversation.png
+    caption: 'A course group conversation in the widened message drawer: the pinned handout with its PDF attachment and reactions, and the pinned strip at the top.'
+  - path: .camp/screenshots/02-image-reactions.png
+    caption: An attached image shown in the message, with reactions from the group.
+  - path: .camp/screenshots/03-mention-seenby.png
+    caption: 'A teacher''s @-mention, an edited message, and "Seen by" under the latest message.'
+  - path: .camp/screenshots/04-mention-picker.png
+    caption: Typing @ in a group conversation lists matching members to mention. The scheduled-messages strip is at the top.
+  - path: .camp/screenshots/05-edit-history.png
+    caption: Anyone in the conversation can see the earlier versions of an edited message.
+  - path: .camp/screenshots/06-attach-file.png
+    caption: 'A one-to-one conversation: an image uploaded and waiting to be sent, and a PDF attachment received earlier.'
+  - path: .camp/screenshots/07-schedule-send.png
+    caption: 'Scheduled send: choose when the message goes out.'
+  - path: .camp/screenshots/08-search.png
+    caption: Message search across all conversations, group conversations included.
 links:
   docs: https://github.com/adamjenkins/moodle-local_messagingsupercharger#readme
   issues: https://github.com/adamjenkins/moodle-local_messagingsupercharger/issues
