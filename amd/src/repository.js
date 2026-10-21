@@ -25,6 +25,7 @@
  */
 
 import Ajax from 'core/ajax';
+import Config from 'core/config';
 
 const call = (methodname, args) => Promise.resolve(Ajax.call([{
     methodname: 'local_messagingsupercharger_' + methodname,
@@ -67,9 +68,9 @@ export const uploadFile = (file, conversationid, draftitemid, onProgress, onStar
     data.append('file', file, file.name || 'image.png');
     data.append('conversationid', conversationid);
     data.append('draftitemid', draftitemid);
-    data.append('sesskey', M.cfg.sesskey);
+    data.append('sesskey', Config.sesskey);
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', M.cfg.wwwroot + '/local/messagingsupercharger/upload.php');
+    xhr.open('POST', Config.wwwroot + '/local/messagingsupercharger/upload.php');
     xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
             onProgress(e.loaded / e.total);
