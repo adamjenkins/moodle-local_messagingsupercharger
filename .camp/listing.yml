@@ -19,7 +19,7 @@ labels:
   - fully-free
 screenshots:
   - path: .camp/screenshots/01-group-conversation.png
-    caption: 'A course group conversation in the widened message drawer: the pinned handout with its PDF attachment and reactions, and the pinned strip at the top.'
+    caption: 'A group conversation in the widened drawer: a pinned handout with a PDF attachment and reactions, and the pinned strip.'
   - path: .camp/screenshots/02-image-reactions.png
     caption: An attached image shown in the message, with reactions from the group.
   - path: .camp/screenshots/03-mention-seenby.png
