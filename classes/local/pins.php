@@ -45,6 +45,11 @@ class pins {
         if (!features::enabled(features::PINNING) || !conversations::is_member($userid, (int)$conversation->id)) {
             return false;
         }
+        // A pin is shown to every member with the pinning user's name, so the rules for
+        // sending apply too: blocking, "contacts only" privacy, a disabled conversation.
+        if (!conversations::can_send($userid, (int)$conversation->id)) {
+            return false;
+        }
         if ((int)$conversation->type === api::MESSAGE_CONVERSATION_TYPE_GROUP) {
             return conversations::has_capability('pinmessage', $conversation, $userid);
         }

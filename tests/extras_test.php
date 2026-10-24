@@ -134,6 +134,72 @@ final class extras_test extends \advanced_testcase {
         $this->assertCount(1, pins::list($individual, (int)$this->users['ben']->id));
     }
 
+    public function test_sending_rules_apply_to_reactions_and_pins(): void {
+        $ben = $this->users['ben'];
+        $cat = $this->users['cat'];
+        $individual = $this->getDataGenerator()->get_plugin_generator('local_messagingsupercharger')
+            ->create_individual_conversation($ben, $cat);
+        $this->setUser($cat);
+        $message = sender::send((int)$cat->id, (int)$individual->id, 'From Cat', FORMAT_PLAIN);
+        $this->assertTrue(reactions::can_react($individual, (int)$ben->id));
+        $this->assertTrue(pins::can_pin($individual, (int)$ben->id));
+
+        // Blocked by the other person: no reacting to or pinning their messages.
+        api::block_user((int)$cat->id, (int)$ben->id);
+        $this->assert_cannot_react_or_pin($individual, $message, $ben);
+        api::unblock_user((int)$cat->id, (int)$ben->id);
+        $this->assertTrue(reactions::can_react($individual, (int)$ben->id));
+
+        // Not a contact of someone who accepts messages from contacts only.
+        api::remove_contact((int)$cat->id, (int)$ben->id);
+        set_user_preference('message_blocknoncontacts', api::MESSAGE_PRIVACY_ONLYCONTACTS, $cat);
+        $this->assert_cannot_react_or_pin($individual, $message, $ben);
+
+        // A group conversation a teacher has disabled.
+        $message = $this->send_and_read('To the group');
+        $teacher = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $this->group->courseid, 'editingteacher');
+        groups_add_member($this->group->groupid, $teacher->id);
+        $this->assertTrue(pins::can_pin($this->group, (int)$teacher->id));
+        api::disable_conversation((int)$this->group->id);
+        $group = local\conversations::get((int)$this->group->id);
+        $this->assert_cannot_react_or_pin($group, $message, $ben);
+        $this->assertFalse(pins::can_pin($group, (int)$teacher->id));
+
+        // The extras service tells the page, so it offers neither.
+        $this->setUser($ben);
+        $extras = extras::for_conversation((int)$this->group->id, [(int)$message->id], 0, (int)$ben->id);
+        $this->assertFalse($extras['permissions']['canreact']);
+        $this->assertFalse($extras['permissions']['canpin']);
+    }
+
+    /**
+     * Assert that a user can neither react to nor pin a message, and is told so.
+     *
+     * @param \stdClass $conversation
+     * @param \stdClass $message
+     * @param \stdClass $user
+     */
+    protected function assert_cannot_react_or_pin(\stdClass $conversation, \stdClass $message, \stdClass $user): void {
+        global $DB;
+        $this->assertFalse(reactions::can_react($conversation, (int)$user->id));
+        $this->assertFalse(pins::can_pin($conversation, (int)$user->id));
+        try {
+            reactions::toggle((int)$message->id, (int)$user->id, 'thumbsup');
+            $this->fail('Reacted although the sending rules forbid it');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('cannotsend', $e->errorcode);
+        }
+        try {
+            pins::set((int)$message->id, (int)$user->id, true);
+            $this->fail('Pinned although the sending rules forbid it');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('nopermissiontopin', $e->errorcode);
+        }
+        $this->assertFalse($DB->record_exists('local_messagingsupercharger_reaction', ['messageid' => $message->id]));
+        $this->assertFalse($DB->record_exists('local_messagingsupercharger_pin', ['messageid' => $message->id]));
+    }
+
     public function test_seen_by_uses_core_read_state_and_preferences(): void {
         $message = $this->send_and_read('Did you see?');
         $conversation = local\conversations::get((int)$this->group->id);

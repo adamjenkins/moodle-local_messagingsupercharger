@@ -127,8 +127,7 @@ class extras {
             'servertime' => time(),
             'permissions' => [
                 'canpin' => $canpin,
-                'canreact' => features::enabled(features::REACTIONS)
-                    && conversations::has_capability('react', $conversation, $viewerid),
+                'canreact' => reactions::can_react($conversation, $viewerid),
                 'cansendattachments' => features::enabled(features::ATTACHMENTS)
                     && conversations::has_capability('sendattachments', $conversation, $viewerid),
                 'canuserichtext' => features::enabled(features::RICHTEXT)

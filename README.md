@@ -93,7 +93,8 @@ messaging web services also accept formatted text, and every message is cleaned 
 Moodle's HTML cleaning when it is shown, whichever way it was written.
 
 All of Moodle's own messaging rules still apply: blocking, "contacts only" privacy,
-messaging disabled, conversation membership and disabled group conversations. Scheduled
+messaging disabled, conversation membership and disabled group conversations. They apply
+to reactions and pins too, since other members see those with the person's name. Scheduled
 messages are checked again when they are sent.
 
 ## Security and privacy

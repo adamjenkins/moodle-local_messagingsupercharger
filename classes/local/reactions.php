@@ -55,7 +55,23 @@ class reactions {
     }
 
     /**
-     * Add or remove the user's reaction to a message.
+     * Can the user react to messages in this conversation?
+     *
+     * @param \stdClass $conversation
+     * @param int $userid
+     * @return bool
+     */
+    public static function can_react(\stdClass $conversation, int $userid): bool {
+        // Reactions are seen by the other members with the reacting user's name, so the
+        // rules for sending apply too: blocking, "contacts only" privacy, a disabled
+        // conversation, messaging switched off.
+        return features::enabled(features::REACTIONS)
+            && conversations::has_capability('react', $conversation, $userid)
+            && conversations::can_send($userid, (int)$conversation->id);
+    }
+
+    /**
+     * Add or remove one of the user's reactions to a message.
      *
      * @param int $messageid
      * @param int $userid
@@ -71,6 +87,7 @@ class reactions {
         }
         [$message, $conversation] = conversations::require_visible_message($messageid, $userid);
         conversations::require_capability('react', $conversation, $userid);
+        conversations::require_can_send($userid, (int)$conversation->id);
 
         $params = ['messageid' => $messageid, 'userid' => $userid, 'reaction' => $reaction];
         if ($DB->record_exists('local_messagingsupercharger_reaction', $params)) {
