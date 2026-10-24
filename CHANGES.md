@@ -1,5 +1,9 @@
 # Changes
 
-## v0.1.3
+## v0.1.4
 
-- No change to the plugin itself. Release archives now leave out development files (.github, .camp, tests and similar), and this release publishes the 0.1.2 changes to the camp registry, where the 0.1.2 publish did not complete. See changelog.md for 0.1.2.
+- Reactions and pins now follow Moodle's rules for sending messages: someone who has been blocked, who is not a contact of a person accepting messages from contacts only, or who is in a disabled group conversation can no longer react to or pin messages there, and the buttons are not offered.
+- The link preview settings say that previews never go through the site's proxy server.
+- Colours follow the Moodle Design System tokens, so the plugin matches Moodle 5.3's dark colour mode; earlier Moodle versions look unchanged.
+- The plugin has an icon on the plugins administration page.
+- Maturity raised from Beta to Stable.

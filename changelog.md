@@ -3,6 +3,27 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
+## [0.1.4] - 2026-10-24
+
+### Changed
+
+- Maturity raised from Beta to Stable.
+- Colours come from the Moodle Design System tokens, falling back to the Bootstrap variables,
+  so the styles follow Moodle 5.3's dark colour mode; earlier branches look unchanged.
+- The JavaScript reads the site address and session key through `core/config` instead of the
+  legacy `M.cfg` global.
+- The link preview settings description says previews never use the site's proxy server.
+
+### Added
+
+- A plugin icon (`pix/icon.svg`) for the plugins administration page.
+
+### Fixed
+
+- Reactions and pins now apply the same rules as sending a message (blocking, "contacts only"
+  privacy, disabled conversations, messaging switched off). Before, a member could react to or
+  pin messages in a conversation where they were not allowed to send.
+
 ## [0.1.3] - 2026-10-04
 
 ### Changed
