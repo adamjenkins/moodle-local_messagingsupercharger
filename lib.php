@@ -122,5 +122,11 @@ function local_messagingsupercharger_user_preferences(): array {
             'choices' => [0, 1],
             'permissioncallback' => [core_user::class, 'is_current_user'],
         ],
+        'local_messagingsupercharger_drawerwidth' => [
+            'type' => PARAM_INT,
+            'null' => NULL_NOT_ALLOWED,
+            'default' => 0,
+            'permissioncallback' => [core_user::class, 'is_current_user'],
+        ],
     ];
 }

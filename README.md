@@ -25,7 +25,9 @@ without changing core:
   top of the conversation, where they can be changed or cancelled.
 - **Message search** across all your conversations, group conversations included.
 - **Resizable drawer**: drag the handle on the drawer's edge (or focus it and use the
-  arrow keys) to make the drawer wider; double-click to reset.
+  arrow keys) to make the drawer wider; double-click to reset. The width is saved for
+  your account, so it is kept across pages, browsers and cache purges, and it shrinks to
+  fit a smaller screen.
 
 ## Email: sent once, a little later
 

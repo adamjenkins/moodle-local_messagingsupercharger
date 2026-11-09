@@ -33,5 +33,6 @@ function xmldb_local_messagingsupercharger_uninstall() {
     $DB->set_field('local_messagingsupercharger_emailq', 'timedue', 0, ['claimtoken' => null]);
     \local_messagingsupercharger\local\emailhold::send_due();
     $DB->delete_records('user_preferences', ['name' => \local_messagingsupercharger\local\extras::PREF_SEENBY]);
+    $DB->delete_records('user_preferences', ['name' => \local_messagingsupercharger\local\extras::PREF_DRAWERWIDTH]);
     return true;
 }

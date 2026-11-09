@@ -115,6 +115,7 @@ class provider implements
         $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
         $collection->add_subsystem_link('core_message', [], 'privacy:metadata:core_message');
         $collection->add_user_preference(extras::PREF_SEENBY, 'privacy:metadata:preference:showseenby');
+        $collection->add_user_preference(extras::PREF_DRAWERWIDTH, 'privacy:metadata:preference:drawerwidth');
         $collection->add_external_location_link('linkpreview', [
             'url' => 'privacy:metadata:linkpreview:url',
         ], 'privacy:metadata:linkpreview');
@@ -276,7 +277,7 @@ class provider implements
     }
 
     /**
-     * Export the seen-by preference.
+     * Export the seen-by and drawer width preferences.
      *
      * @param int $userid
      */
@@ -288,6 +289,15 @@ class provider implements
                 extras::PREF_SEENBY,
                 $value ? get_string('yes') : get_string('no'),
                 get_string('privacy:metadata:preference:showseenby', 'local_messagingsupercharger')
+            );
+        }
+        $width = (int)get_user_preferences(extras::PREF_DRAWERWIDTH, 0, $userid);
+        if ($width > 0) {
+            writer::export_user_preference(
+                'local_messagingsupercharger',
+                extras::PREF_DRAWERWIDTH,
+                $width,
+                get_string('privacy:metadata:preference:drawerwidth', 'local_messagingsupercharger')
             );
         }
     }

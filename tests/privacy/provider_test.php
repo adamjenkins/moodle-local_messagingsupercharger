@@ -83,6 +83,7 @@ final class provider_test extends provider_testcase {
         reactions::toggle((int)$groupmessage->id, (int)$this->ann->id, 'thumbsup');
         scheduler::schedule((int)$this->ann->id, (int)$group->id, 'Tomorrow', FORMAT_PLAIN, time() + DAYSECS);
         set_user_preference('local_messagingsupercharger_showseenby', 0, $this->ann);
+        set_user_preference('local_messagingsupercharger_drawerwidth', 480, $this->ann);
 
         // Ben reacts too, so we can check his data survives Ann's deletion.
         reactions::toggle((int)$groupmessage->id, (int)$this->ben->id, 'heart');
@@ -137,6 +138,7 @@ final class provider_test extends provider_testcase {
         provider::export_user_preferences((int)$this->ann->id);
         $prefs = writer::with_context(\context_system::instance())->get_user_preferences('local_messagingsupercharger');
         $this->assertObjectHasProperty('local_messagingsupercharger_showseenby', $prefs);
+        $this->assertEquals(480, $prefs->local_messagingsupercharger_drawerwidth->value);
 
         // Ben's mention is exported to Ben.
         $bencontext = \context_user::instance($this->ben->id);

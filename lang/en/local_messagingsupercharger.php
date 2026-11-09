@@ -184,6 +184,7 @@ $string['privacy:metadata:local_messagingsupercharger_sched:mentions'] = 'People
 $string['privacy:metadata:local_messagingsupercharger_sched:status'] = 'Whether the message could not be sent.';
 $string['privacy:metadata:local_messagingsupercharger_sched:timesend'] = 'When it will be sent.';
 $string['privacy:metadata:local_messagingsupercharger_sched:userid'] = 'The sender.';
+$string['privacy:metadata:preference:drawerwidth'] = 'The width the person chose for the message drawer, in pixels.';
 $string['privacy:metadata:preference:showseenby'] = 'Whether the person shows, and sees, who has read messages in group conversations.';
 $string['privacy:pins'] = 'Pinned messages';
 $string['privacy:reactions'] = 'Reactions';

@@ -17,6 +17,7 @@
 namespace local_messagingsupercharger;
 
 use local_messagingsupercharger\local\cleanup;
+use local_messagingsupercharger\local\extras;
 use local_messagingsupercharger\local\features;
 use local_messagingsupercharger\local\reactions;
 
@@ -73,6 +74,7 @@ class hook_callbacks {
             'pollinterval' => features::poll_interval(),
             'reactions' => reactions::for_js(),
             'showseenby' => (bool)get_user_preferences('local_messagingsupercharger_showseenby', true),
+            'drawerwidth' => max(0, (int)get_user_preferences(extras::PREF_DRAWERWIDTH, 0)),
             'canschedule' => has_capability('local/messagingsupercharger:schedulesend', $syscontext),
             'contextid' => $syscontext->id,
         ];

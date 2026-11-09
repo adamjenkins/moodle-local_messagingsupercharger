@@ -18,23 +18,30 @@
  *
  * The handle is a focusable ARIA separator: drag it, or use the arrow keys (Shift for
  * bigger steps), Home and End; double-click restores the theme's width. The
- * chosen width is remembered in this browser only, because the right width depends on
- * the screen. On narrow screens the drawer keeps the theme's own layout.
+ * chosen width is saved as a user preference: browser storage would not do, because
+ * core's storage wrapper empties it whenever the site's JavaScript caches are purged
+ * (core/storagewrapper validateCache). On a smaller screen the width is reduced to fit,
+ * and on narrow screens the drawer keeps the theme's own layout.
  *
  * @module     local_messagingsupercharger/resize
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Notification from 'core/notification';
+import {setUserPreference} from 'core_user/repository';
 import Selectors from 'local_messagingsupercharger/selectors';
-import {enabled, str} from 'local_messagingsupercharger/state';
+import {config, enabled, str} from 'local_messagingsupercharger/state';
 import {el} from 'local_messagingsupercharger/dom';
 
-const STORAGE_KEY = 'local_messagingsupercharger_drawerwidth';
+const PREFERENCE = 'local_messagingsupercharger_drawerwidth';
 const MIN_WIDTH = 280;
 const MIN_SCREEN = 768;
 const STEP = 20;
 const BIG_STEP = 80;
+
+/** Pending preference save, so a run of key presses saves once. */
+let saveTimer = null;
 
 /**
  * Read the remembered width.
@@ -42,12 +49,8 @@ const BIG_STEP = 80;
  * @returns {Number|null}
  */
 const loadWidth = () => {
-    try {
-        const value = parseInt(window.localStorage.getItem(STORAGE_KEY), 10);
-        return Number.isFinite(value) ? value : null;
-    } catch (e) {
-        return null;
-    }
+    const value = parseInt(config().drawerwidth, 10);
+    return Number.isFinite(value) && value > 0 ? value : null;
 };
 
 /**
@@ -56,15 +59,15 @@ const loadWidth = () => {
  * @param {Number|null} width
  */
 const saveWidth = (width) => {
-    try {
-        if (width === null) {
-            window.localStorage.removeItem(STORAGE_KEY);
-        } else {
-            window.localStorage.setItem(STORAGE_KEY, String(width));
-        }
-    } catch (e) {
-        // Storage unavailable (private window, blocked site data): the width just is not remembered.
+    const value = width === null ? 0 : width;
+    if (parseInt(config().drawerwidth, 10) === value) {
+        return;
     }
+    config().drawerwidth = value;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        setUserPreference(PREFERENCE, value).catch(Notification.exception);
+    }, 500);
 };
 
 /**

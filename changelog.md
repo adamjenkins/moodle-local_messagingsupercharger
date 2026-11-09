@@ -3,6 +3,15 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
+## [Unreleased]
+
+### Fixed
+
+- The message drawer width chosen with the resize handle was forgotten whenever the site's
+  caches were purged: Moodle's storage wrapper empties browser storage when the JavaScript
+  revision changes. The width is now saved as a user preference
+  (`local_messagingsupercharger_drawerwidth`), covered by the privacy provider.
+
 ## [0.1.4] - 2026-10-24
 
 ### Changed

@@ -33,6 +33,9 @@ class extras {
     /** @var string User preference: show and share "seen by". */
     const PREF_SEENBY = 'local_messagingsupercharger_showseenby';
 
+    /** @var string User preference: the message drawer width in pixels chosen with the handle, 0 for the theme's. */
+    const PREF_DRAWERWIDTH = 'local_messagingsupercharger_drawerwidth';
+
     /** @var int Most messages described per call. */
     const MAX_MESSAGES = 200;
 
