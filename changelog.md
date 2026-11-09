@@ -3,7 +3,7 @@
 All notable changes to this plugin are documented here, newest first, in the
 [Keep a Changelog](https://keepachangelog.com/) format.
 
-## [Unreleased]
+## [0.1.5] - 2026-11-09
 
 ### Fixed
 
